@@ -1,6 +1,6 @@
 # 小红书下载器UI (XHS Downloader UI)
 
-[English Documentation](README.md) | **中文文档**
+[English](README.md) | **中文**
 
 一个极简、响应式的 Web UI，用于解析并下载小红书的高清无水印图片和视频。
 

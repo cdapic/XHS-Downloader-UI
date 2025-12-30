@@ -1,6 +1,6 @@
 # XHS Downloader UI
 
-**English Documentation** | [中文](README.zh-CN.md)
+**English** | [中文](README.zh-CN.md)
 
 A minimalist, responsive Web UI designed to parse and download high-definition, watermark-free images and videos from Xiaohongshu (XHS).
 
