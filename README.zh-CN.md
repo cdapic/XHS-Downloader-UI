@@ -1,4 +1,4 @@
-# 小红书无水印下载器前端 (XHS Downloader UI)
+# 小红书下载器UI (XHS Downloader UI)
 
 [English Documentation](README.md) | **中文文档**
 
@@ -12,7 +12,6 @@
 ## ✨ 功能特性
 
 - **无水印解析**: 直接提取高质量的原始图片和视频资源。
-- **视频预览修复**: 解决了小红书视频外链产生的“403 Forbidden”或黑屏问题。通过前端 Blob 代理策略绕过 Referrer 限制。
 - **批量下载**: 支持一键打包（ZIP格式）下载笔记中的所有素材。
 - **响应式设计**: 完美适配桌面端和移动端浏览器。
 - **元数据展示**: 直观展示点赞、收藏、评论数据，支持一键复制文案。
@@ -31,7 +30,8 @@
 ### 前置要求
 
 1. **Node.js**: v16 或更高版本。
-2. **后端 API**: 本项目仅包含前端代码。你需要一个运行中的后端服务（如 Python/Flask）来处理实际的链接解析请求。
+2. **后端 API**: 本项目是专门为配合 **[XHS-Downloader](https://github.com/JoeanAmier/XHS-Downloader)** 设计的。
+   - 请克隆该仓库并以 API 服务器模式运行。
    - 默认后端地址: `http://localhost:8000`
 
 ### 安装步骤
@@ -68,18 +68,12 @@
 ### 关于视频防盗链 (403 Forbidden) 的解决方案
 小红书的 CDN 开启了严格的防盗链（Referer 检查）。直接使用 `<video src="...">` 标签通常会因为浏览器发送了 Referer 头而被拒绝访问（403 Forbidden），导致视频黑屏无法播放。
 
-**我们的解决方案**:
-我们在前端实现了 **Blob 代理 (Blob Proxy)** 策略：
+**解决方案**:
+在前端实现 **Blob 代理 (Blob Proxy)** 策略：
 1. 使用 `fetch()` API 并设置 `referrerPolicy: 'no-referrer'` 将视频数据下载到浏览器内存中。
 2. 使用 `URL.createObjectURL` 生成一个本地的 Blob URL。
 3. 将这个本地 URL 赋值给播放器。
 
-这种方法既能绕过防盗链限制，又能保证视频流畅播放。
+## PSS
 
-## 🤝 参与贡献
-
-欢迎提交 Pull Request！如果是重大更改，请先提交 Issue 讨论您想要改变的内容。
-
-## 📄 许可证
-
-MIT
+作为个人练手项目，本人主要部署到nas使用。

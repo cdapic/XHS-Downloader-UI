@@ -1,85 +1,84 @@
 # XHS Downloader UI
 
-[中文文档](README.zh-CN.md) | **English**
+**English Documentation** | [中文](README.zh-CN.md)
 
-A minimalist, responsive Web UI for downloading high-quality images and videos from Xiaohongshu (Little Red Book) without watermarks.
-
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![React](https://img.shields.io/badge/React-19-61dafb.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)
-![Tailwind](https://img.shields.io/badge/Tailwind-3.0-38bdf8.svg)
+A minimalist, responsive Web UI designed to parse and download high-definition, watermark-free images and videos from Xiaohongshu (XHS).
 
 ## ✨ Features
 
-- **No Watermark Parsing**: Extract high-quality images and videos directly from source.
-- **Video Preview Fix**: Solves the "403 Forbidden" / black screen issue on video previews using a custom Blob Proxy strategy to bypass Referrer checks.
-- **Batch Download**: Download all media in a post as a single ZIP file with one click.
-- **Responsive Design**: Optimized for both Desktop and Mobile experiences.
-- **Metadata Viewer**: View detailed post statistics (Likes, Collects, Comments) and easily copy the description.
-- **Multi-language**: Built-in support for English and Chinese.
+* **Watermark-free Parsing**: Directly extract high-quality original image and video resources.
+* **Batch Download**: Supports one-click packaging (ZIP format) for all assets in a post.
+* **Responsive Design**: Optimized for both desktop and mobile browsers.
+* **Metadata Display**: View likes, favorites, and comments at a glance; includes one-click copy for captions.
+* **Multi-language Support**: Built-in Chinese and English interface.
 
 ## 🛠 Tech Stack
 
-- **Frontend**: React 19, TypeScript
-- **Styling**: Tailwind CSS
-- **Icons**: Lucide React
-- **Utilities**: JSZip (for batch downloading)
-- **Build Tool**: Vite
+* **Frontend Framework**: React 19, TypeScript
+* **Styling**: Tailwind CSS
+* **Icons**: Lucide React
+* **Utilities**: JSZip (for packaged downloads)
+* **Build Tool**: Vite
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 
 1. **Node.js**: v16 or higher.
-2. **Backend API**: This is a frontend-only project. You need a running backend service (e.g., Python/Flask) to handle the actual link parsing and API requests.
-   - Default API URL: `http://localhost:8000`
+2. **Backend API**: This project is specifically designed to work with **[XHS-Downloader](https://github.com/JoeanAmier/XHS-Downloader)**.
+* Please clone that repository and run it in API server mode.
+* Default backend address: `http://localhost:8000`
+
+
 
 ### Installation
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/xhs-downloader-ui.git
-   cd xhs-downloader-ui
-   ```
+```bash
+git clone https://github.com/yourusername/xhs-downloader-ui.git
+cd xhs-downloader-ui
+
+```
+
 
 2. Install dependencies:
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
+```bash
+npm install
+# or
+yarn install
 
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
+```
+
+
+3. Start the development server:
+```bash
+npm run dev
+
+```
+
 
 4. Open `http://localhost:5173` in your browser.
 
 ## ⚙️ Configuration
 
-By default, the app connects to `http://localhost:8000`. 
-You can change this in the UI by clicking the **Settings** icon in the top right corner.
+The app connects to `http://localhost:8000` by default.
+You can modify the backend API address by clicking the **Settings** icon in the top right corner.
 
-- **Demo Mode**: Enter `demo` as the API URL to use mock data for testing UI functionality without a real backend.
+* **Demo Mode**: Enter `demo` in the API address field to use mock data. This allows you to test the UI functionality without a running backend.
 
 ## 🧩 Technical Details
 
-### Solving the Video Hotlink Protection (403 Forbidden)
-Xiaohongshu employs strict hotlink protection (Referrer checks) on their CDN. Standard `<video src="...">` tags often fail with `403 Forbidden` or display a black screen because browsers automatically send the `Referer` header.
+### Solving Video Hotlinking Issues (403 Forbidden)
 
-**Our Solution**:
-We implemented a **Blob Proxy** strategy in the frontend:
-1. Use `fetch()` with `referrerPolicy: 'no-referrer'` to download the video binary to browser memory.
-2. Create a local `Blob URL` (`URL.createObjectURL`).
-3. Feed this local URL to the HTML5 video player.
+Xiaohongshu's CDN implements strict hotlinking protection (Referer checks). Using a standard `<video src="...">` tag usually results in an access denial (403 Forbidden) because the browser sends a Referer header, causing the video to fail to load.
 
-This ensures the video plays smoothly while fully respecting browser security policies.
+**Solution**:
+The frontend implements a **Blob Proxy** strategy:
 
-## 🤝 Contributing
+1. Use the `fetch()` API with `referrerPolicy: 'no-referrer'` to download the video data into browser memory.
+2. Generate a local Blob URL using `URL.createObjectURL`.
+3. Assign this local URL to the video player.
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+## PS
 
-## 📄 License
-
-MIT
+This is a personal practice project; I primarily deploy it on my NAS for personal use.
