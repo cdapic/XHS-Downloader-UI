@@ -1,0 +1,5 @@
+{
+  "name": "XHS Downloader UI",
+  "description": "A minimalist, responsive Web UI for downloading high-quality images and videos from Xiaohongshu (Little Red Book).",
+  "requestFramePermissions": []
+}
