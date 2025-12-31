@@ -23,3 +23,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+wh-index.html
+utils/i18n copy.ts
+package-lock.json
+App copy.tsx
