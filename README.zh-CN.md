@@ -94,4 +94,9 @@ npm run dev
 
 ---
 
+## 📝 更新日志
+
+### 2026-04-14
+- 配合后端 XHS-Downloader API Server 添加 CORS 中间件，解决通过 VPN / 虚拟局域网 / 本地局域网访问时的跨域请求失败问题
+
 > © 2025 cdapic. 本项目基于 [MIT 许可证](LICENSE) 开源。
