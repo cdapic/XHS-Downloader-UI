@@ -13,16 +13,12 @@ export const parseXHSLink = async (
     });
   }
 
-  // Ensure trailing slash for cleanness, though we construct url carefully
+  // Strip any trailing slash the user may have typed so we always send
+  // the exact path they configured (e.g. `http://host:5556/xhs/detail`).
+  // Appending an extra `/` here used to trigger FastAPI's 307 redirect,
+  // which CORS preflight explicitly forbids, breaking cross-origin POST.
   const cleanBaseUrl = baseUrl.replace(/\/$/, '');
-  
-  // Based on standard implementation of similar tools, usually it's a POST to root or /api
-  // We will assume POST to /download or / based on common patterns, 
-  // but looking at the PRD "python main.py api" typically runs a server.
-  // We'll try a generic endpoint structure. 
-  // Given the PRD doesn't specify the exact path, we will use the root if not specified.
-  
-  const endpoint = `${cleanBaseUrl}/`;
+  const endpoint = cleanBaseUrl;
 
   try {
     const response = await fetch(endpoint, {
