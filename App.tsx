@@ -8,7 +8,7 @@ import {
     Info,
 } from "lucide-react";
 import { Settings, Language, ParseStatus, XHSApiResponse } from "./types";
-import { DEFAULT_API_URL, DEMO_API_KEY } from "./constants";
+import { getDefaultApiUrl, DEMO_API_KEY } from "./constants";
 import { parseXHSLink } from "./services/xhsService";
 import { t } from "./utils/i18n";
 import { SettingsModal } from "./components/SettingsModal";
@@ -19,7 +19,7 @@ function App() {
     // State
     const [language, setLanguage] = useState<Language>(Language.ZH);
     const [settings, setSettings] = useState<Settings>({
-        apiUrl: DEFAULT_API_URL,
+        apiUrl: getDefaultApiUrl(),
     });
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -36,7 +36,7 @@ function App() {
     // Initialization Logic: Load settings & Auto-detect API URL
     useEffect(() => {
         const savedSettingsStr = localStorage.getItem("xhs_settings");
-        let settingsToUse: Settings = { apiUrl: DEFAULT_API_URL };
+        let settingsToUse: Settings = { apiUrl: getDefaultApiUrl() };
 
         if (savedSettingsStr) {
             try {
@@ -46,37 +46,21 @@ function App() {
             }
         }
 
-        // Smart Auto-Discovery Logic
-        // If the app is accessed via a non-localhost IP (e.g., LAN 192.168.x.x, VPN 100.x.x.x),
-        // automatically configure the API URL to match that IP on port 5556 with /xhs/detail path.
-        const hostname = window.location.hostname;
-        const isLocalhost =
-            hostname === "localhost" || hostname === "127.0.0.1";
-
-        if (!isLocalhost) {
-            // User requirement: specific port 5556 and path /xhs/detail for network IPs
-            const autoUrl = `http://${hostname}:5556/xhs/detail`;
-
-            // If the current saved URL is different from the auto-detected one, update it
-            // This handles moving between networks (e.g. from 192.168.1.5 to 10.0.0.5)
-            if (settingsToUse.apiUrl !== autoUrl) {
-                settingsToUse = { ...settingsToUse, apiUrl: autoUrl };
-
-                // Save to local storage immediately
-                localStorage.setItem(
-                    "xhs_settings",
-                    JSON.stringify(settingsToUse),
-                );
-
-                // Trigger notification
-                setNotification({
-                    show: true,
-                    message: `${t(language, "apiAutoUpdated")}${autoUrl}`,
-                });
-
-                // Auto hide notification
-                setTimeout(() => setNotification(null), 5000);
-            }
+        // Always use same-origin /xhs/detail (nginx 反代到 5556)。
+        // 这样无论用户怎么访问 (localhost/IP/域名),浏览器都只连 nginx,
+        // 绕开 5556 端口对外不可达、跨域预检、容器/防火墙隔离等问题。
+        const autoUrl = getDefaultApiUrl();
+        if (settingsToUse.apiUrl !== autoUrl) {
+            settingsToUse = { ...settingsToUse, apiUrl: autoUrl };
+            localStorage.setItem(
+                "xhs_settings",
+                JSON.stringify(settingsToUse),
+            );
+            setNotification({
+                show: true,
+                message: `${t(language, "apiAutoUpdated")}${autoUrl}`,
+            });
+            setTimeout(() => setNotification(null), 5000);
         }
 
         setSettings(settingsToUse);
@@ -104,13 +88,21 @@ function App() {
 
         try {
             const data = await parseXHSLink(inputText, settings.apiUrl);
-            if (data && data.data) {
+            // 后端在解析失败时返回 data: null 或 data: {} (200 状态),
+            // 这两种都视为前端"失败",但要保留 message 字段以便用户看到真实原因。
+            if (data) {
                 setResult(data);
-                setStatus("success");
+                const hasData =
+                    data.data &&
+                    typeof data.data === "object" &&
+                    Object.keys(data.data).length > 0;
+                setStatus(hasData ? "success" : "error");
             } else {
                 setStatus("error");
             }
         } catch (error) {
+            // 网络层错误 (CORS / nginx 5xx / 后端挂掉) 才走到这里
+            console.error("Parse request failed:", error);
             setStatus("error");
         }
     };
@@ -234,15 +226,24 @@ function App() {
                     </div>
 
                     {status === "error" && (
-                        <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-                            <AlertCircle size={20} className="shrink-0" />
-                            <div>
+                        <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                            <AlertCircle
+                                size={20}
+                                className="shrink-0 mt-0.5"
+                            />
+                            <div className="flex-1 min-w-0">
                                 <p className="font-semibold">
                                     {t(language, "errorTitle")}
                                 </p>
-                                <p className="text-sm opacity-80">
-                                    {t(language, "errorDesc")}
-                                </p>
+                                {result?.message ? (
+                                    <p className="text-sm mt-1 opacity-90">
+                                        {result.message}
+                                    </p>
+                                ) : (
+                                    <p className="text-sm opacity-80">
+                                        {t(language, "errorDesc")}
+                                    </p>
+                                )}
                                 <p className="text-xs mt-1 text-red-400 font-mono break-all">
                                     {settings.apiUrl}
                                 </p>

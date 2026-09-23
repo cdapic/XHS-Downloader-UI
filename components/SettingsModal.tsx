@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, RotateCcw } from 'lucide-react';
 import { Settings, Language } from '../types';
 import { t } from '../utils/i18n';
-import { DEFAULT_API_URL } from '../constants';
+import { getDefaultApiUrl } from '../constants';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -28,7 +28,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   if (!isOpen) return null;
 
   const handleReset = () => {
-    setLocalApiUrl(DEFAULT_API_URL);
+    setLocalApiUrl(getDefaultApiUrl());
   };
 
   const handleSave = () => {
@@ -60,11 +60,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               type="text"
               value={localApiUrl}
               onChange={(e) => setLocalApiUrl(e.target.value)}
-              placeholder="e.g., http://localhost:8000"
+              placeholder="e.g., /xhs/detail"
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-xhs-red focus:border-transparent outline-none transition-all"
             />
             <p className="text-xs text-gray-400 mt-2">
-              Default: {DEFAULT_API_URL} | Demo: demo
+              Default: {getDefaultApiUrl()} | Demo: demo
             </p>
           </div>
         </div>
