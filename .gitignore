@@ -27,3 +27,6 @@ wh-index.html
 utils/i18n copy.ts
 package-lock.json
 App copy.tsx
+
+# 部署脚本
+sync.sh
