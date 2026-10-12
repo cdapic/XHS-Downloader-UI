@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, PlayCircle, Image as ImageIcon, Loader2, ExternalLink, AlertCircle } from 'lucide-react';
+import { Download, PlayCircle, Image as ImageIcon, Loader2, ExternalLink, AlertCircle, Maximize2 } from 'lucide-react';
 import { XHSNoteData, Language } from '../types';
 import { downloadMedia, downloadSingleFile } from '../utils/downloader';
 import { t } from '../utils/i18n';
@@ -10,11 +10,12 @@ interface MediaGridProps {
 }
 
 // Helper to generate thumbnail URL for faster preview
+// 缩略图走 imageView2 CDN 压缩：w/240 q/50 首屏只发 ~5-10KB/张，原图只在 hover 放大按钮触发。
 const getThumbnailUrl = (url: string): string => {
   if (!url) return '';
   if (url.includes('imageView2')) return url;
   const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}imageView2/2/w/480/format/webp/q/75`;
+  return `${url}${separator}imageView2/2/w/240/format/webp/q/50`;
 };
 
 // Helper to guess extension
@@ -33,37 +34,40 @@ interface VideoItemProps {
 }
 
 const VideoItem: React.FC<VideoItemProps> = ({ url, poster, index }) => {
+  // 默认折叠：不 fetch 视频流，节省首屏带宽；用户点播放才展开 fetch+blob。
+  const [expanded, setExpanded] = useState(false);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
+    if (!expanded) return;
     let active = true;
     let createdUrl = '';
 
     const fetchVideo = async () => {
+      setLoading(true);
+      setError(false);
+
+      // Fetch using fetch API to strictly control referrer
+      // This bypasses the <video> tag's limitation where it might still send Origin/Referrer
       try {
-        setLoading(true);
-        setError(false);
-        
-        // Fetch using fetch API to strictly control referrer
-        // This bypasses the <video> tag's limitation where it might still send Origin/Referrer
         const response = await fetch(url, { referrerPolicy: 'no-referrer' });
-        
+
         if (!response.ok) {
           throw new Error(`Failed to load video: ${response.status}`);
         }
 
         const blob = await response.blob();
-        
+
         if (active) {
           createdUrl = URL.createObjectURL(blob);
           setBlobUrl(createdUrl);
           setLoading(false);
         }
       } catch (err) {
-        console.error("Video Blob fetch failed:", err);
+        console.error('Video Blob fetch failed:', err);
         if (active) {
           setError(true);
           setLoading(false);
@@ -79,21 +83,50 @@ const VideoItem: React.FC<VideoItemProps> = ({ url, poster, index }) => {
         URL.revokeObjectURL(createdUrl);
       }
     };
-  }, [url]);
+  }, [url, expanded]);
 
   const handleOpenOriginal = () => {
     window.open(url, '_blank', 'noreferrer');
   };
 
-  // Error State / Fallback
+  // 折叠态：缩略图 + 中心播放按钮；不消耗带宽。
+  if (!expanded) {
+    return (
+      <button
+        onClick={() => setExpanded(true)}
+        aria-label={`Play video ${index + 1}`}
+        className="w-full h-full relative bg-black group/vid cursor-pointer flex items-center justify-center"
+      >
+        {poster ? (
+          <img
+            src={poster}
+            alt={`Video ${index + 1}`}
+            className="w-full h-full object-contain"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="text-white/50 text-sm">No preview</div>
+        )}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover/vid:bg-black/40 transition-colors">
+          <PlayCircle
+            size={56}
+            className="text-white/90 group-hover/vid:text-white group-hover/vid:scale-110 transition-all drop-shadow-lg"
+          />
+        </div>
+      </button>
+    );
+  }
+
+  // Error State / Fallback (展开后 fetch 失败)
   if (error) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 text-gray-400 gap-2 p-4 text-center">
         <AlertCircle size={24} className="text-red-400" />
         <p className="text-xs">Preview unavailable</p>
-        <button 
+        <button
           onClick={handleOpenOriginal}
-          className="mt-2 flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-full transition-colors"
+            className="mt-2 flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-full transition-colors"
         >
           <ExternalLink size={12} />
           Open Original
@@ -113,15 +146,15 @@ const VideoItem: React.FC<VideoItemProps> = ({ url, poster, index }) => {
 
       {/* Video Player */}
       {blobUrl && (
-        <video 
+        <video
           ref={videoRef}
-          src={blobUrl} 
-          className="w-full h-full object-contain" 
-          controls 
+          src={blobUrl}
+          className="w-full h-full object-contain"
+          controls
           playsInline
           poster={poster}
           // Loop short videos for better experience
-          loop 
+          loop
         />
       )}
     </div>
@@ -209,13 +242,33 @@ export const MediaGrid: React.FC<MediaGridProps> = ({ data, language }) => {
         <button
           onClick={handleBatchDownload}
           disabled={isDownloading || displayItems.length === 0}
-          className="flex items-center gap-2 px-4 py-2 bg-xhs-dark text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 bg-xhs-dark text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium min-w-[180px]"
         >
           {isDownloading ? (
-            <>
-              <Loader2 size={16} className="animate-spin" />
-              {downloadProgress}%
-            </>
+            <div className="flex items-center gap-2 flex-1">
+              <Loader2 size={16} className="animate-spin shrink-0" />
+              <div className="flex-1 flex flex-col gap-1 min-w-0">
+                <div className="flex justify-between items-center text-xs">
+                  <span>
+                    {t(
+                      language,
+                      downloadProgress > 80
+                        ? 'compressing'
+                        : 'downloading',
+                    )}
+                  </span>
+                  <span className="tabular-nums">
+                    {downloadProgress}%
+                  </span>
+                </div>
+                <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-xhs-red transition-all duration-300 ease-out"
+                    style={{ width: `${downloadProgress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
           ) : (
             <>
               <Download size={16} />
@@ -262,7 +315,15 @@ export const MediaGrid: React.FC<MediaGridProps> = ({ data, language }) => {
               {/* Overlay gradient for controls visibility */}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none z-20" />
               
-              <button 
+              <button
+                onClick={() => window.open(url, '_blank', 'noreferrer')}
+                className="absolute bottom-3 right-[60px] p-3 bg-white/90 backdrop-blur text-gray-800 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:text-xhs-red z-30"
+                title="Open Original"
+              >
+                <Maximize2 size={18} />
+              </button>
+
+              <button
                 onClick={() => handleSingleDownload(url, index)}
                 disabled={downloadingItems.has(index)}
                 className="absolute bottom-3 right-3 p-3 bg-white/90 backdrop-blur text-gray-800 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:text-xhs-red disabled:opacity-70 disabled:cursor-wait z-30"

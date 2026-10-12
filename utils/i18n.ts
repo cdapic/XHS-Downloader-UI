@@ -8,6 +8,7 @@ const translations = {
         parsing: "解析中...",
         downloadAll: "打包下载",
         downloading: "打包中...",
+        compressing: "压缩中...",
         errorTitle: "解析失败",
         errorDesc: "请检查链接是否有效或后端服务是否启动。",
         history: "历史",
@@ -32,6 +33,7 @@ const translations = {
         parsing: "Parsing...",
         downloadAll: "Download All",
         downloading: "Zipping...",
+        compressing: "Compressing...",
         errorTitle: "Parse Failed",
         errorDesc:
             "Check if the link is valid or if the backend service is running.",

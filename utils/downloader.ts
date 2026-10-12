@@ -33,38 +33,47 @@ export const downloadSingleFile = async (url: string, filename: string) => {
 };
 
 export const downloadMedia = async (
-  urls: string[], 
-  prefix: string, 
+  urls: string[],
+  prefix: string,
   type: 'image' | 'video',
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
 ) => {
   const zip = new JSZip();
   const folder = zip.folder(prefix) || zip;
-  
+
   let processed = 0;
 
   const promises = urls.map(async (url, index) => {
     try {
       const blob = await fetchBlob(url);
-      
+
       const ext = type === 'video' ? 'mp4' : 'png';
       const filename = `${prefix}_${index + 1}.${ext}`;
-      
+
       folder.file(filename, blob);
     } catch (error) {
       console.error(`Error downloading file ${url}:`, error);
       // Fallback: Add a text file with the error url
-      folder.file(`${prefix}_${index + 1}_error.txt`, `Failed to download: ${url}`);
+      folder.file(
+        `${prefix}_${index + 1}_error.txt`,
+        `Failed to download: ${url}`,
+      );
     } finally {
       processed++;
+      // fetch 阶段占 0-80%；压缩阶段会从 80% 接续到 99%。
       if (onProgress) {
-        onProgress(Math.round((processed / urls.length) * 100));
+        onProgress(Math.round((processed / urls.length) * 80));
       }
     }
   });
 
   await Promise.all(promises);
 
-  const content = await zip.generateAsync({ type: 'blob' });
+  // 压缩阶段占 80-99%（留 1% 给 saveAs），与 fetch 阶段拼接成完整 0-100%。
+  const content = await zip.generateAsync(
+    { type: 'blob' },
+    (meta) =>
+      onProgress?.(Math.min(99, 80 + Math.round(meta.percent * 0.19))),
+  );
   saveAs(content, `${prefix}_xhs_material.zip`);
 };
