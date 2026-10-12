@@ -5,6 +5,8 @@ import { parseXHSLink } from "./services/xhsService";
 import { t } from "./utils/i18n";
 import { ResultCard } from "./components/ResultCard";
 import { MediaGrid } from "./components/MediaGrid";
+import { HistoryPanel } from "./components/HistoryPanel";
+import { useHistory } from "./hooks/useHistory";
 
 function App() {
     // State
@@ -12,6 +14,16 @@ function App() {
     const [inputText, setInputText] = useState("");
     const [status, setStatus] = useState<ParseStatus>("idle");
     const [result, setResult] = useState<XHSApiResponse | null>(null);
+
+    // History (localStorage)
+    const {
+        items: historyItems,
+        push: pushHistory,
+        clear: clearHistory,
+    } = useHistory();
+    const handleHistoryPick = (text: string) => {
+        setInputText(text);
+    };
 
     // Toggle Language
     const toggleLanguage = () => {
@@ -22,13 +34,14 @@ function App() {
 
     // Parse Action
     const handleParse = async () => {
-        if (!inputText.trim()) return;
+        const submitted = inputText.trim();
+        if (!submitted) return;
 
         setStatus("loading");
         setResult(null);
 
         try {
-            const data = await parseXHSLink(inputText);
+            const data = await parseXHSLink(submitted);
             // 后端在解析失败时返回 data: null 或 data: {} (200 状态),
             // 这两种都视为前端"失败",但要保留 message 字段以便用户看到真实原因。
             if (data) {
@@ -38,13 +51,22 @@ function App() {
                     typeof data.data === "object" &&
                     Object.keys(data.data).length > 0;
                 setStatus(hasData ? "success" : "error");
+                pushHistory({
+                    text: submitted,
+                    status: hasData ? "success" : "error",
+                    noteTitle: hasData
+                        ? data.data?.作品标题
+                        : undefined,
+                });
             } else {
                 setStatus("error");
+                pushHistory({ text: submitted, status: "error" });
             }
         } catch (error) {
             // 网络层错误 (CORS / nginx 5xx / 后端挂掉) 才走到这里
             console.error("Parse request failed:", error);
             setStatus("error");
+            pushHistory({ text: submitted, status: "error" });
         }
     };
 
@@ -122,6 +144,13 @@ function App() {
                             </button>
                         </div>
                     </div>
+
+                    <HistoryPanel
+                        items={historyItems}
+                        onPick={handleHistoryPick}
+                        onClear={clearHistory}
+                        language={language}
+                    />
 
                     {status === "error" && (
                         <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">

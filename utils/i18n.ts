@@ -10,6 +10,8 @@ const translations = {
         downloading: "打包中...",
         errorTitle: "解析失败",
         errorDesc: "请检查链接是否有效或后端服务是否启动。",
+        history: "历史",
+        historyClear: "清空",
         author: "作者",
         published: "发布于",
         images: "图片",
@@ -33,6 +35,8 @@ const translations = {
         errorTitle: "Parse Failed",
         errorDesc:
             "Check if the link is valid or if the backend service is running.",
+        history: "History",
+        historyClear: "Clear",
         author: "Author",
         published: "Published",
         images: "Images",
