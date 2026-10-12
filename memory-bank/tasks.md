@@ -31,6 +31,31 @@
   - `sync.sh`（已存在，2026-09-30，gitignored）：当前只 `npm run build` + `sudo rsync`，看是否需扩展加 nginx reload / 后端 `git pull` 提示
 - **触发时机**：用户明确开始推进时
 
+### [待启动] 粘贴按钮（2026-10-12 登记）
+- **需求**：在 textarea 旁加一个"粘贴"按钮，点击调 `navigator.clipboard.readText()` 把剪贴板内容填到输入框
+- **要点**：
+  - 现代浏览器 API（Chrome 66+ / Safari 13.1+ / Firefox 63+），HTTPS / localhost 才可用
+  - 失败 fallback：弹提示 "无法读取剪贴板，请手动粘贴"
+  - 移动端注意：iOS Safari 13.4+ 才支持，Android Chrome 一直支持
+- **触发时机**：用户明确开始推进时
+
+### [待启动] 移动端适配 (全栈)（2026-10-12 登记）
+- **范围**：手机 + pad（横竖屏），不只是"屏幕能看"
+- **前端**：
+  - viewport meta（index.html 当前**无 viewport**，手机默认 980px 缩放）必须加 `width=device-width initial-scale=1`
+  - touch target ≥ 44px（iOS HIG）：按钮 padding、tap area
+  - 响应式断点：当前 `sm:` `lg:` 用得有点随便，要审视（输入区 `max-w-2xl` 在手机太宽？）
+  - textarea 在手机上默认弹出键盘大小、autocomplete 关闭
+  - 视频 / 图片 lazy load + IntersectionObserver
+- **后端**：
+  - CORS 当前 `ACAO:*` 接受所有来源，移动端 webview 没问题，但 native app webview 可能要收敛白名单
+  - 响应大小：`XHSNoteData.下载地址数组 []` 一次返回所有原图 URL，pad 多图 note（几十张）首屏 payload 几 MB；考虑分页 / 延迟加载单图直链
+  - nginx gzip 开启（参考 techContext 已知陷阱提到的"未启用 gzip"）
+- **验证**：
+  - iPhone Safari / Android Chrome 真机测一遍
+  - Chrome DevTools mobile emulation + Lighthouse mobile audit
+- **触发时机**：用户明确开始推进时
+
 ---
 
 ## Done（倒序，最多 20 条；旧条目归档到 `archive/`）
