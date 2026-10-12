@@ -31,37 +31,87 @@
 
 ## 🚀 快速开始
 
-### 前置要求
+本前端是个纯静态页面，通过 nginx **同源反代**与后端通信。整套部署有三个角色：
 
-1. **Node.js**: v16 或更高版本。  
-2. **后端 API**: 本项目专为配合 [**XHS-Downloader**](https://github.com/JoeanAmier/XHS-Downloader) 设计。  
-   - 请先克隆并运行该后端服务（API 模式）。  
-   - 默认后端地址：`http://localhost:8000`
+```
+[浏览器] ──► http://<nginx 主机>:1234    (nginx 提供 dist/ 静态服务)
+                  │
+                  └─ /xhs/* ──proxy_pass──► http://<后端主机>:5556/xhs/
 
-### 安装步骤
-
-```bash
-# 1. 克隆仓库
-git clone https://github.com/cdapic/XHS-Downloader-UI.git
-cd XHS-Downloader-UI
-
-# 2. 安装依赖
-npm install
-# 或
-yarn install
-
-# 3. 启动开发服务器
-npm run dev
+[后端] ──► docker xhs-downloader-api       (FastAPI :5556)
 ```
 
-4. 在浏览器中打开 `http://localhost:5173`。
+**后端地址不写在前端代码里，写在 nginx 的 `proxy_pass` 里**。
+
+### 前置要求
+
+1. **Node.js**: v16 或更高版本（仅构建前端时需要）。
+2. **后端**: 克隆并运行 [**XHS-Downloader**](https://github.com/JoeanAmier/XHS-Downloader) 的 API 模式（推荐 Docker），监听 `0.0.0.0:5556`。
+3. **Web 服务器**: nginx（或任何能提供静态文件 + 反代 `/xhs/*` 的服务器）。
+
+### 构建前端
+
+```bash
+git clone https://github.com/cdapic/XHS-Downloader-UI.git
+cd XHS-Downloader-UI
+npm install
+npm run build         # 输出 dist/
+```
+
+### 配置 nginx
+
+参考 server 段：
+
+```nginx
+server {
+    listen 1234;
+    server_name _;
+
+    root /var/www/xhs-ui;            # 指向你的 dist/ 目录
+    index index.html;
+
+    # SPA fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 后端 API 反代（**唯一**指定后端地址的地方）
+    location /xhs/ {
+        proxy_pass http://<后端主机>:5556/xhs/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_http_version 1.1;
+        proxy_read_timeout 120s;
+    }
+
+    # 静态资源缓存
+    location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf)$ {
+        expires 7d;
+    }
+}
+```
+
+把 `dist/` 同步到 nginx 主机：
+
+```bash
+rsync -avz --delete dist/ <用户>@<nginx 主机>:/var/www/xhs-ui/
+```
+
+（仓库自带 `sync.sh`，可通过 `TARGET_HOST` / `TARGET_DIR` 环境变量调整目标。）
+
+### 打开 UI
+
+浏览器访问 `http://<nginx 主机>:1234/`，完事。
 
 ## ⚙️ 配置说明
 
-应用默认连接到 `http://localhost:8000`。  
-点击右上角 **设置 (Settings)** 图标可修改后端 API 地址。
+**前端不需要配置后端地址**。前端通过 `${window.location.origin}/xhs/detail` 自动连接后端（nginx 同源反代），用户从哪个主机/端口访问 UI，就从那里调到后端。
 
-- **演示模式 (Demo Mode)**: 在 API 地址栏输入 `demo`，应用将使用模拟数据，方便在没有后端的情况下测试 UI 功能。
+要改后端地址：**改 nginx 配置**（`proxy_pass` 指令），**不是改前端**。
+
+### 演示模式 (Demo Mode)
+
+想在没有真实后端的情况下预览 UI，点右上角 **设置 (Settings)** 图标，在 API 地址栏输入 `demo`，UI 会加载模拟数据。设置**仅在当前会话有效** —— 刷新页面会自动恢复为 nginx 反代的真实端点。
 
 ## 🧩 技术细节
 

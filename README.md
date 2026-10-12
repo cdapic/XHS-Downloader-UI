@@ -31,37 +31,87 @@ A minimal and responsive web UI for parsing and downloading high-quality, waterm
 
 ## 🚀 Quick Start
 
-### Prerequisites
+This UI is a pure frontend that talks to the backend through **same-origin reverse proxy** in nginx. There are three moving parts:
 
-1. **Node.js**: v16 or higher.  
-2. **Backend API**: This UI is designed to work with [**XHS-Downloader**](https://github.com/JoeanAmier/XHS-Downloader).  
-   - Clone and run the backend in API mode.  
-   - Default backend URL: `http://localhost:8000`
+```
+[Browser] ──► http://<nginx-host>:1234    (nginx serves dist/)
+                  │
+                  └─ /xhs/* ──proxy_pass──► http://<backend-host>:5556/xhs/
 
-### Installation
-
-```bash
-# 1. Clone the repo
-git clone https://github.com/cdapic/XHS-Downloader-UI.git
-cd XHS-Downloader-UI
-
-# 2. Install dependencies
-npm install
-# or
-yarn install
-
-# 3. Start dev server
-npm run dev
+[Backend] ──► docker xhs-downloader-api     (FastAPI :5556)
 ```
 
-4. Open your browser at `http://localhost:5173`.
+You don't configure the backend URL in the frontend — you configure nginx's `proxy_pass`.
+
+### Prerequisites
+
+1. **Node.js**: v16 or higher (only needed to build the frontend).
+2. **Backend**: Clone and run [**XHS-Downloader**](https://github.com/JoeanAmier/XHS-Downloader) in API mode (Docker recommended). It listens on `0.0.0.0:5556`.
+3. **Web server**: nginx (or anything that serves static files and reverse-proxies `/xhs/*`).
+
+### Build the frontend
+
+```bash
+git clone https://github.com/cdapic/XHS-Downloader-UI.git
+cd XHS-Downloader-UI
+npm install
+npm run build         # outputs dist/
+```
+
+### Configure nginx
+
+Example server block:
+
+```nginx
+server {
+    listen 1234;
+    server_name _;
+
+    root /var/www/xhs-ui;            # point this at your dist/ directory
+    index index.html;
+
+    # SPA fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Backend API reverse proxy (the ONLY place to set backend host)
+    location /xhs/ {
+        proxy_pass http://<backend-host>:5556/xhs/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_http_version 1.1;
+        proxy_read_timeout 120s;
+    }
+
+    # Static asset cache
+    location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf)$ {
+        expires 7d;
+    }
+}
+```
+
+Then sync `dist/` to your nginx host:
+
+```bash
+rsync -avz --delete dist/ <user>@<nginx-host>:/var/www/xhs-ui/
+```
+
+(The repo ships `sync.sh` for this — see `TARGET_HOST` / `TARGET_DIR` env vars.)
+
+### Open the UI
+
+Browse to `http://<nginx-host>:1234/`. Done.
 
 ## ⚙️ Configuration
 
-The app defaults to connecting to `http://localhost:8000`.  
-Click the **Settings** icon (top-right) to change the backend API URL.
+**The frontend does not need backend configuration.** It connects to `${window.location.origin}/xhs/detail` automatically — same-origin via the nginx reverse proxy. Whichever host/port you access the UI from is where it will call the backend.
 
-- **Demo Mode**: Enter `demo` as the API URL to load mock data—ideal for testing the UI without a backend.
+To change the backend host: **edit your nginx config** (`proxy_pass` directive), not this app.
+
+### Demo Mode
+
+For previewing the UI without a real backend, click the **Settings** icon (top-right) and enter `demo` as the API URL. The UI will load mock data. The setting only lasts for the current session — a page refresh resets to your nginx-backed endpoint.
 
 ## 🧩 Technical Notes
 
