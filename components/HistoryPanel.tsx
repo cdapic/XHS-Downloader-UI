@@ -43,7 +43,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
         <div className="mt-2 bg-white rounded-xl border border-gray-100 overflow-hidden">
             <button
                 onClick={() => setExpanded((prev) => !prev)}
-                className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-between px-4 py-2 min-h-[44px] text-sm text-gray-600 hover:bg-gray-50 transition-colors"
                 aria-expanded={expanded}
             >
                 <div className="flex items-center gap-2">
@@ -70,7 +70,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
                                     onClear();
                                 }
                             }}
-                            className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-500 transition-colors cursor-pointer"
+                            className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-500 transition-colors cursor-pointer min-h-[44px] sm:min-h-0 px-2"
                         >
                             <Trash2 size={14} />
                             {t(language, 'historyClear')}
@@ -90,7 +90,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
                         <div
                             key={item.id}
                             onClick={() => onPick(item.text)}
-                            className="flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors border-b border-gray-50 last:border-b-0"
+                            className="flex items-start gap-3 px-4 py-2.5 min-h-[44px] hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors border-b border-gray-50 last:border-b-0"
                         >
                             <div className="shrink-0 mt-0.5">
                                 {item.status === 'success' ? (

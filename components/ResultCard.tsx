@@ -92,7 +92,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ data, language }) => {
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-4 gap-2 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
                     <div className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
                         <Heart size={18} className="text-gray-400 mb-1" />
                         <span className="text-xs font-medium text-gray-700">
@@ -139,7 +139,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ data, language }) => {
                     </span>
                     <button
                         onClick={handleCopyText}
-                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-xhs-red transition-colors px-2 py-1 rounded-md hover:bg-red-50"
+                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-xhs-red transition-colors px-2 py-1 min-h-[44px] sm:min-h-0 rounded-md hover:bg-red-50"
                     >
                         {copied ? <Check size={14} /> : <Copy size={14} />}
                         {copied

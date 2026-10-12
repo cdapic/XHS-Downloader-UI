@@ -278,7 +278,7 @@ export const MediaGrid: React.FC<MediaGridProps> = ({ data, language }) => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         {displayItems.map((url, index) => {
           const previewUrl = mediaType === 'image' ? getThumbnailUrl(url) : url;
 
@@ -317,7 +317,7 @@ export const MediaGrid: React.FC<MediaGridProps> = ({ data, language }) => {
               
               <button
                 onClick={() => window.open(url, '_blank', 'noreferrer')}
-                className="absolute bottom-3 right-[60px] p-3 bg-white/90 backdrop-blur text-gray-800 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:text-xhs-red z-30"
+                className="absolute bottom-3 right-[60px] p-3 min-h-[44px] min-w-[44px] flex items-center justify-center bg-white/90 backdrop-blur text-gray-800 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg hover:text-xhs-red z-30"
                 title="Open Original"
               >
                 <Maximize2 size={18} />
@@ -326,7 +326,7 @@ export const MediaGrid: React.FC<MediaGridProps> = ({ data, language }) => {
               <button
                 onClick={() => handleSingleDownload(url, index)}
                 disabled={downloadingItems.has(index)}
-                className="absolute bottom-3 right-3 p-3 bg-white/90 backdrop-blur text-gray-800 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:text-xhs-red disabled:opacity-70 disabled:cursor-wait z-30"
+                className="absolute bottom-3 right-3 p-3 min-h-[44px] min-w-[44px] flex items-center justify-center bg-white/90 backdrop-blur text-gray-800 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg hover:text-xhs-red disabled:opacity-70 disabled:cursor-wait z-30"
                 title="Download Original"
               >
                 {downloadingItems.has(index) ? (

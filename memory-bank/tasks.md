@@ -31,34 +31,27 @@
   - `sync.sh`（已存在，2026-09-30，gitignored）：当前只 `npm run build` + `sudo rsync`，看是否需扩展加 nginx reload / 后端 `git pull` 提示
 - **触发时机**：用户明确开始推进时
 
-### [待启动] 粘贴按钮（2026-10-12 登记）
-- **需求**：在 textarea 旁加一个"粘贴"按钮，点击调 `navigator.clipboard.readText()` 把剪贴板内容填到输入框
-- **要点**：
-  - 现代浏览器 API（Chrome 66+ / Safari 13.1+ / Firefox 63+），HTTPS / localhost 才可用
-  - 失败 fallback：弹提示 "无法读取剪贴板，请手动粘贴"
-  - 移动端注意：iOS Safari 13.4+ 才支持，Android Chrome 一直支持
-- **触发时机**：用户明确开始推进时
-
-### [待启动] 移动端适配 (全栈)（2026-10-12 登记）
-- **范围**：手机 + pad（横竖屏），不只是"屏幕能看"
-- **前端**：
-  - viewport meta（index.html 当前**无 viewport**，手机默认 980px 缩放）必须加 `width=device-width initial-scale=1`
-  - touch target ≥ 44px（iOS HIG）：按钮 padding、tap area
-  - 响应式断点：当前 `sm:` `lg:` 用得有点随便，要审视（输入区 `max-w-2xl` 在手机太宽？）
-  - textarea 在手机上默认弹出键盘大小、autocomplete 关闭
-  - 视频 / 图片 lazy load + IntersectionObserver
-- **后端**：
-  - CORS 当前 `ACAO:*` 接受所有来源，移动端 webview 没问题，但 native app webview 可能要收敛白名单
-  - 响应大小：`XHSNoteData.下载地址数组 []` 一次返回所有原图 URL，pad 多图 note（几十张）首屏 payload 几 MB；考虑分页 / 延迟加载单图直链
-  - nginx gzip 开启（参考 techContext 已知陷阱提到的"未启用 gzip"）
-- **验证**：
-  - iPhone Safari / Android Chrome 真机测一遍
-  - Chrome DevTools mobile emulation + Lighthouse mobile audit
-- **触发时机**：用户明确开始推进时
-
 ---
 
 ## Done（倒序，最多 20 条；旧条目归档到 `archive/`）
+
+### 2026-10-12 — 粘贴按钮 + 移动端适配（前端落地）
+- **粘贴按钮**：
+  - `App.tsx` 输入区操作行新增"粘贴"按钮（解析按钮左侧，`justify-between` 布局），点击调 `navigator.clipboard.readText()`
+  - 成功 → 替换 textarea 内容（trim）；失败 / API 不存在 / 非 HTTPS → 输入区下方显示琥珀色提示条，3 秒自动消失（`useEffect` + `setTimeout`）
+  - `status === "loading"` 时禁用；图标用 lucide-react `ClipboardPaste`；次要按钮样式 `border border-gray-200 text-gray-600 hover:bg-gray-50`
+  - i18n 新增 `pasteBtn`（"粘贴" / "Paste"）、`pasteFailed`（"无法读取剪贴板，请手动粘贴" / "Cannot read clipboard, please paste manually"）双语 key
+- **移动端适配（前端可落地部分）**：
+  - textarea 加 `autoComplete/autoCorrect/autoCapitalize="off"` + `spellCheck={false}` + `enterKeyHint="go"`（移动端键盘回车键显示"前往"）
+  - 触摸目标 ≥ 44px：Header 语言切换（`min-w-[44px] min-h-[44px]`）、粘贴/解析按钮（`min-h-[44px]`）、ResultCard 复制文案按钮（`min-h-[44px] sm:min-h-0` 桌面端还原）、HistoryPanel 展开头 / 清空 / 列表项
+  - MediaGrid 浮动按钮（打开原图、下载原图）：移动端常驻 `opacity-100`，桌面端恢复 hover `sm:opacity-0 sm:group-hover:opacity-100`；补 `min-h-[44px] min-w-[44px]`
+  - 响应式：MediaGrid gap `gap-4 sm:gap-6`；ResultCard stats `grid-cols-2 sm:grid-cols-4`（手机 2 列，sm 起 4 列）
+  - viewport meta 已存在（index.html L5），本次未改；index.html Play CDN（IS-01 P0）不在本次范围
+- **后端遗留项（不在本仓库，另记）**：
+  - CORS 白名单收敛（当前 `ACAO:*`）
+  - 响应分页 / 延迟加载单图直链（多图 note 首屏 payload 几 MB）
+  - nginx gzip 开启
+- **构建**：`npm run build`（tsc + vite build）零错误零警告
 
 ### 2026-09-23 — 与官方上游对齐 (git pull + rebuild)
 - **背景**：本地后端落后官方 master 79 个 commit（2 个月）；用户的"前面的问题"根因之一就是 `.cn` 修复没跟上游

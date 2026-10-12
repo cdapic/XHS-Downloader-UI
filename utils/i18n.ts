@@ -20,6 +20,8 @@ const translations = {
         copySuccess: "链接已复制",
         copyText: "复制文案",
         textCopied: "文案已复制",
+        pasteBtn: "粘贴",
+        pasteFailed: "无法读取剪贴板，请手动粘贴",
         stats: {
             likes: "点赞",
             collects: "收藏",
@@ -46,6 +48,8 @@ const translations = {
         copySuccess: "Link Copied",
         copyText: "Copy Text",
         textCopied: "Copied!",
+        pasteBtn: "Paste",
+        pasteFailed: "Cannot read clipboard, please paste manually",
         stats: {
             likes: "Likes",
             collects: "Favs",

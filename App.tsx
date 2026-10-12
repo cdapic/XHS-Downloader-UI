@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Languages, Link2, Search, AlertCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Languages, Link2, Search, AlertCircle, ClipboardPaste } from "lucide-react";
 import { Language, ParseStatus, XHSApiResponse } from "./types";
 import { parseXHSLink } from "./services/xhsService";
 import { t } from "./utils/i18n";
@@ -14,6 +14,14 @@ function App() {
     const [inputText, setInputText] = useState("");
     const [status, setStatus] = useState<ParseStatus>("idle");
     const [result, setResult] = useState<XHSApiResponse | null>(null);
+    const [pasteError, setPasteError] = useState(false);
+
+    // Auto-dismiss paste error toast after 3 seconds
+    useEffect(() => {
+        if (!pasteError) return;
+        const timer = setTimeout(() => setPasteError(false), 3000);
+        return () => clearTimeout(timer);
+    }, [pasteError]);
 
     // History (localStorage)
     const {
@@ -78,6 +86,29 @@ function App() {
         }
     };
 
+    // Paste from clipboard
+    const handlePaste = async () => {
+        if (status === "loading") return;
+        try {
+            if (
+                navigator.clipboard &&
+                typeof navigator.clipboard.readText === "function"
+            ) {
+                const text = await navigator.clipboard.readText();
+                if (text && text.trim()) {
+                    setInputText(text.trim());
+                } else {
+                    setPasteError(true);
+                }
+            } else {
+                setPasteError(true);
+            }
+        } catch (err) {
+            console.warn("Clipboard read failed:", err);
+            setPasteError(true);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 text-gray-900 font-sans selection:bg-red-100">
             {/* Header */}
@@ -95,7 +126,7 @@ function App() {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={toggleLanguage}
-                            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1"
+                            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1 min-w-[44px] min-h-[44px] justify-center"
                             title="Switch Language"
                         >
                             <Languages size={20} />
@@ -123,9 +154,22 @@ function App() {
                                 placeholder={t(language, "inputPlaceholder")}
                                 className="w-full pl-10 pr-4 py-3 min-h-[60px] max-h-[120px] outline-none text-gray-700 placeholder:text-gray-400 resize-none bg-transparent"
                                 rows={2}
+                                autoComplete="off"
+                                autoCorrect="off"
+                                autoCapitalize="off"
+                                spellCheck={false}
+                                enterKeyHint="go"
                             />
                         </div>
-                        <div className="flex justify-end px-2 pb-2">
+                        <div className="flex justify-between items-center px-2 pb-2">
+                            <button
+                                onClick={handlePaste}
+                                disabled={status === "loading"}
+                                className="flex items-center gap-2 border border-gray-200 text-gray-600 hover:bg-gray-50 px-4 py-2.5 rounded-xl font-medium transition-all min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                            >
+                                <ClipboardPaste size={18} />
+                                {t(language, "pasteBtn")}
+                            </button>
                             <button
                                 onClick={handleParse}
                                 disabled={
@@ -172,6 +216,13 @@ function App() {
                                     </p>
                                 )}
                             </div>
+                        </div>
+                    )}
+
+                    {pasteError && (
+                        <div className="mt-4 p-3 bg-amber-50 text-amber-700 rounded-xl flex items-center gap-2 text-sm animate-in fade-in slide-in-from-top-2">
+                            <AlertCircle size={16} className="shrink-0" />
+                            {t(language, "pasteFailed")}
                         </div>
                     )}
                 </div>
