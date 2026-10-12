@@ -32,10 +32,6 @@ export interface XHSApiResponse {
   data: XHSNoteData | null;
 }
 
-export interface Settings {
-  apiUrl: string;
-}
-
 export enum Language {
   ZH = 'zh',
   EN = 'en',

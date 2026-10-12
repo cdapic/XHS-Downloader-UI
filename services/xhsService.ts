@@ -1,24 +1,14 @@
 import { XHSApiResponse } from '../types';
-import { MOCK_RESPONSE, DEMO_API_KEY } from '../constants';
+import { getDefaultApiUrl } from '../constants';
 
 export const parseXHSLink = async (
-  input: string, 
-  baseUrl: string
+  input: string,
 ): Promise<XHSApiResponse> => {
-  
-  // Demo Mode check
-  if (baseUrl === DEMO_API_KEY || input.includes('demo')) {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(MOCK_RESPONSE), 800);
-    });
-  }
-
-  // Strip any trailing slash the user may have typed so we always send
-  // the exact path they configured (e.g. `http://host:5556/xhs/detail`).
-  // Appending an extra `/` here used to trigger FastAPI's 307 redirect,
-  // which CORS preflight explicitly forbids, breaking cross-origin POST.
-  const cleanBaseUrl = baseUrl.replace(/\/$/, '');
-  const endpoint = cleanBaseUrl;
+  // 同源 ${window.location.origin}/xhs/detail,由 nginx 反代到后端 5556。
+  // Strip any trailing slash defensively: appending an extra `/` here used
+  // to trigger FastAPI's 307 redirect, which CORS preflight explicitly
+  // forbids and breaks cross-origin POST.
+  const endpoint = getDefaultApiUrl().replace(/\/$/, '');
 
   try {
     const response = await fetch(endpoint, {
