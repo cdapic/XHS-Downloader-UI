@@ -23,6 +23,8 @@ const translations = {
         errorBackendDesc: "链接可能无效、已删除,或需要登录。请确认链接仍可访问后再试。",
         errorParseTitle: "输入无法识别",
         errorParseDesc: "请粘贴有效的小红书分享文案或链接(xhslink.com / xiaohongshu.com)。",
+        inputNoDomain: "未识别到小红书链接。请粘贴 xhslink.com / xiaohongshu.com 的分享文案或链接。",
+        inputTooLong: "输入过长(超过 2000 字符),请精简后重试。",
         stats: {
             likes: "点赞",
             collects: "收藏",
@@ -51,6 +53,8 @@ const translations = {
         errorBackendDesc: "The link may be invalid, deleted, or require login. Verify it is still accessible and try again.",
         errorParseTitle: "Input not recognized",
         errorParseDesc: "Please paste a valid XHS share text or link (xhslink.com / xiaohongshu.com).",
+        inputNoDomain: "No XHS link detected. Please paste share text or link from xhslink.com / xiaohongshu.com.",
+        inputTooLong: "Input too long (over 2000 chars). Please shorten and retry.",
         stats: {
             likes: "Likes",
             collects: "Favs",

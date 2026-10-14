@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Languages, Link2, Search, AlertCircle, ClipboardPaste } from "lucide-react";
 import { Language, ParseStatus, XHSApiResponse, AppError } from "./types";
 import { parseXHSLink, ParseAbortError, ParseNetworkError } from "./services/xhsService";
+import { validateInput } from "./utils/validation";
 import { t } from "./utils/i18n";
 import { ResultCard } from "./components/ResultCard";
 import { MediaGrid } from "./components/MediaGrid";
@@ -56,6 +57,22 @@ function App() {
     const handleParse = async () => {
         const submitted = inputText.trim();
         if (!submitted) return;
+
+        // FR-04 输入校验:不合法输入不发请求,直接归 parse 错误
+        const validation = validateInput(submitted);
+        if (!validation.ok) {
+            const messageKey =
+                validation.reason === "tooLong"
+                    ? "inputTooLong"
+                    : "inputNoDomain";
+            setStatus("error");
+            setAppError({
+                category: "parse",
+                title: t(language, "errorParseTitle"),
+                message: t(language, messageKey),
+            });
+            return;
+        }
 
         // 若已有进行中的请求,先中止(避免串行触发两次网络)
         parseAbortRef.current?.abort();
