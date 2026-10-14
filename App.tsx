@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Languages } from 'lucide-react';
+import { Languages, AlertCircle, RefreshCw } from 'lucide-react';
 import { AppError, Language, ParseStatus, XHSApiResponse } from './types';
 import { parseXHSLink, ParseAbortError, ParseNetworkError } from './services/xhsService';
+import { probeBackend, HealthStatus } from './services/health';
 import { validateInput } from './utils/validation';
 import { t } from './utils/i18n';
 import { InputCard } from './components/InputCard';
@@ -18,6 +19,17 @@ function App() {
     const [result, setResult] = useState<XHSApiResponse | null>(null);
     const [appError, setAppError] = useState<AppError | null>(null);
 
+    // FR-07 后端健康状态
+    const [health, setHealth] = useState<HealthStatus>('unknown');
+    const [isProbing, setIsProbing] = useState(false);
+    const runProbe = async () => {
+        if (isProbing) return;
+        setIsProbing(true);
+        const ok = await probeBackend();
+        setHealth(ok ? 'up' : 'down');
+        setIsProbing(false);
+    };
+
     // 当前进行中的解析请求控制器(FR-02 用于取消)
     const parseAbortRef = useRef<AbortController | null>(null);
 
@@ -26,6 +38,12 @@ function App() {
         return () => {
             parseAbortRef.current?.abort();
         };
+    }, []);
+
+    // mount 时探测后端
+    useEffect(() => {
+        runProbe();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // History (localStorage)
@@ -195,6 +213,27 @@ function App() {
             </header>
 
             <main className="max-w-5xl mx-auto px-4 py-8 md:py-12">
+                {health === 'down' && (
+                    <div className="max-w-2xl mx-auto mb-4 p-3 bg-amber-50 text-amber-700 rounded-xl flex items-center gap-3 text-sm animate-in fade-in slide-in-from-top-2">
+                        <AlertCircle size={18} className="shrink-0" />
+                        <span className="flex-1">
+                            {t(language, 'healthBannerText')}
+                        </span>
+                        <button
+                            onClick={runProbe}
+                            disabled={isProbing}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors min-h-[44px] sm:min-h-0 disabled:opacity-50"
+                        >
+                            <RefreshCw
+                                size={14}
+                                className={
+                                    isProbing ? 'animate-spin' : undefined
+                                }
+                            />
+                            {t(language, 'healthRetry')}
+                        </button>
+                    </div>
+                )}
                 <div className="max-w-2xl mx-auto mb-12">
                     <InputCard
                         inputText={inputText}

@@ -27,6 +27,9 @@ const translations = {
         errorParseDesc: "请粘贴有效的小红书分享文案或链接(xhslink.com / xiaohongshu.com)。",
         inputNoDomain: "未识别到小红书链接。请粘贴 xhslink.com / xiaohongshu.com 的分享文案或链接。",
         inputTooLong: "输入过长(超过 2000 字符),请精简后重试。",
+        // FR-07 健康探针
+        healthBannerText: "后端服务未就绪,部分功能可能不可用。",
+        healthRetry: "重试",
         stats: {
             likes: "点赞",
             collects: "收藏",
@@ -59,6 +62,9 @@ const translations = {
         errorParseDesc: "Please paste a valid XHS share text or link (xhslink.com / xiaohongshu.com).",
         inputNoDomain: "No XHS link detected. Please paste share text or link from xhslink.com / xiaohongshu.com.",
         inputTooLong: "Input too long (over 2000 chars). Please shorten and retry.",
+        // FR-07 health banner
+        healthBannerText: "Backend service is not ready. Some features may be unavailable.",
+        healthRetry: "Retry",
         stats: {
             likes: "Likes",
             collects: "Favs",
