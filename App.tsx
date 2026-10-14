@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Languages, Link2, Search, AlertCircle, ClipboardPaste } from "lucide-react";
-import { Language, ParseStatus, XHSApiResponse } from "./types";
-import { parseXHSLink, ParseAbortError } from "./services/xhsService";
+import { Language, ParseStatus, XHSApiResponse, AppError } from "./types";
+import { parseXHSLink, ParseAbortError, ParseNetworkError } from "./services/xhsService";
 import { t } from "./utils/i18n";
 import { ResultCard } from "./components/ResultCard";
 import { MediaGrid } from "./components/MediaGrid";
@@ -14,6 +14,7 @@ function App() {
     const [inputText, setInputText] = useState("");
     const [status, setStatus] = useState<ParseStatus>("idle");
     const [result, setResult] = useState<XHSApiResponse | null>(null);
+    const [appError, setAppError] = useState<AppError | null>(null);
     const [pasteError, setPasteError] = useState(false);
 
     // Auto-dismiss paste error toast after 3 seconds
@@ -62,27 +63,45 @@ function App() {
 
         setStatus("loading");
         setResult(null);
+        setAppError(null);
 
         try {
             const data = await parseXHSLink(submitted, { signal: controller.signal });
             // 后端在解析失败时返回 data: null 或 data: {} (200 状态),
-            // 这两种都视为前端"失败",但要保留 message 字段以便用户看到真实原因。
+            // 这两种都视为前端"失败",归类为 backend(后端已收到但未能解析)。
             if (data) {
-                setResult(data);
                 const hasData =
                     data.data &&
                     typeof data.data === "object" &&
                     Object.keys(data.data).length > 0;
-                setStatus(hasData ? "success" : "error");
-                pushHistory({
-                    text: submitted,
-                    status: hasData ? "success" : "error",
-                    noteTitle: hasData
-                        ? data.data?.作品标题
-                        : undefined,
-                });
+                if (hasData) {
+                    setResult(data);
+                    setStatus("success");
+                    pushHistory({
+                        text: submitted,
+                        status: "success",
+                        noteTitle: data.data?.作品标题,
+                    });
+                } else {
+                    // 后端业务类:HTTP 200 但 data 为 null/空
+                    setStatus("error");
+                    setAppError({
+                        category: "backend",
+                        title: t(language, "errorBackendTitle"),
+                        message:
+                            data.message?.trim() ||
+                            t(language, "errorBackendDesc"),
+                    });
+                    pushHistory({ text: submitted, status: "error" });
+                }
             } else {
+                // 防御:正常不会到这里(parseXHSLink 应总是返回非 null)
                 setStatus("error");
+                setAppError({
+                    category: "backend",
+                    title: t(language, "errorBackendTitle"),
+                    message: t(language, "errorBackendDesc"),
+                });
                 pushHistory({ text: submitted, status: "error" });
             }
         } catch (error) {
@@ -91,19 +110,36 @@ function App() {
                 setStatus("idle");
                 return;
             }
-            // 超时 → 归类为错误(后续 FR-03 会再细化为"后端无响应")
+            // 超时 → 归类为网络类
             if (error instanceof ParseAbortError && error.reason === "timeout") {
                 console.warn("Parse request timed out");
-                setResult({
-                    message: t(language, "timeoutError"),
-                } as XHSApiResponse);
                 setStatus("error");
+                setAppError({
+                    category: "network",
+                    title: t(language, "errorNetworkTitle"),
+                    message: t(language, "timeoutError"),
+                });
                 return;
             }
-            // 网络层错误 (CORS / nginx 5xx / 后端挂掉) 才走到这里
-            console.error("Parse request failed:", error);
+            // 网络层错误 (CORS / nginx 5xx / 后端挂掉 / fetch reject / JSON 解析失败)
+            if (error instanceof ParseNetworkError) {
+                console.error("Parse network error:", error);
+                setStatus("error");
+                setAppError({
+                    category: "network",
+                    title: t(language, "errorNetworkTitle"),
+                    message: t(language, "errorNetworkDesc"),
+                });
+                return;
+            }
+            // 未知异常:兜底归类为 parse(可能是输入或响应结构异常)
+            console.error("Parse failed unexpectedly:", error);
             setStatus("error");
-            pushHistory({ text: submitted, status: "error" });
+            setAppError({
+                category: "parse",
+                title: t(language, "errorParseTitle"),
+                message: t(language, "errorParseDesc"),
+            });
         } finally {
             // 清理 ref:仅当仍是当前控制器时清空(避免新请求被误清)
             if (parseAbortRef.current === controller) {
@@ -247,25 +283,27 @@ function App() {
                         language={language}
                     />
 
-                    {status === "error" && (
-                        <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                    {status === "error" && appError && (
+                        <div
+                            className={
+                                appError.category === "network"
+                                    ? "mt-4 p-4 bg-red-50 text-red-600 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2"
+                                    : appError.category === "backend"
+                                      ? "mt-4 p-4 bg-amber-50 text-amber-700 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2"
+                                      : "mt-4 p-4 bg-blue-50 text-blue-700 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2"
+                            }
+                        >
                             <AlertCircle
                                 size={20}
                                 className="shrink-0 mt-0.5"
                             />
                             <div className="flex-1 min-w-0">
                                 <p className="font-semibold">
-                                    {t(language, "errorTitle")}
+                                    {appError.title}
                                 </p>
-                                {result?.message ? (
-                                    <p className="text-sm mt-1 opacity-90">
-                                        {result.message}
-                                    </p>
-                                ) : (
-                                    <p className="text-sm opacity-80">
-                                        {t(language, "errorDesc")}
-                                    </p>
-                                )}
+                                <p className="text-sm mt-1 opacity-90 break-words">
+                                    {appError.message}
+                                </p>
                             </div>
                         </div>
                     )}

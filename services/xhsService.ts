@@ -15,6 +15,20 @@ export class ParseAbortError extends Error {
   }
 }
 
+/**
+ * 网络层错误:fetch reject / HTTP 非 2xx / 响应体解析失败。
+ * App 层归类为 `network` 错误分类。
+ */
+export class ParseNetworkError extends Error {
+  /** 若为 HTTP 状态码错误,记录状态码;网络层 reject 时为 undefined */
+  status?: number;
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = 'ParseNetworkError';
+    this.status = status;
+  }
+}
+
 export interface ParseOptions {
   /** 外部传入的 AbortSignal：用户取消时调用方应 abort 此 signal */
   signal?: AbortSignal;
@@ -68,7 +82,10 @@ export const parseXHSLink = async (
     });
 
     if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`);
+      throw new ParseNetworkError(
+        `API responded with HTTP ${response.status}`,
+        response.status,
+      );
     }
 
     const data: XHSApiResponse = await response.json();
@@ -78,7 +95,14 @@ export const parseXHSLink = async (
     if (error instanceof Error && error.name === 'AbortError') {
       throw new ParseAbortError(timeoutFired ? 'timeout' : 'cancelled');
     }
-    throw error;
+    // 已经是 ParseNetworkError,直接上抛
+    if (error instanceof ParseNetworkError) {
+      throw error;
+    }
+    // 其他(fetch reject / JSON 解析失败等)统一归类为网络层错误
+    const message =
+      error instanceof Error ? error.message : 'Network request failed';
+    throw new ParseNetworkError(message);
   } finally {
     clearTimeout(timer);
     if (externalSignal) {

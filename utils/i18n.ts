@@ -24,6 +24,13 @@ const translations = {
         pasteFailed: "无法读取剪贴板，请手动粘贴",
         cancel: "取消",
         timeoutError: "解析超时，后端可能无响应。请稍后重试或检查后端服务。",
+        // FR-03 错误三分类
+        errorNetworkTitle: "无法连接到服务",
+        errorNetworkDesc: "请检查 nginx 与后端容器是否运行,以及本机网络是否通畅。",
+        errorBackendTitle: "后端未能解析此链接",
+        errorBackendDesc: "链接可能无效、已删除,或需要登录。请确认链接仍可访问后再试。",
+        errorParseTitle: "输入无法识别",
+        errorParseDesc: "请粘贴有效的小红书分享文案或链接(xhslink.com / xiaohongshu.com)。",
         stats: {
             likes: "点赞",
             collects: "收藏",
@@ -54,6 +61,13 @@ const translations = {
         pasteFailed: "Cannot read clipboard, please paste manually",
         cancel: "Cancel",
         timeoutError: "Request timeout: backend may be unresponsive. Retry or check the backend service.",
+        // FR-03 error taxonomy
+        errorNetworkTitle: "Cannot reach service",
+        errorNetworkDesc: "Check that nginx and the backend container are running, and that your network is reachable.",
+        errorBackendTitle: "Backend could not parse this link",
+        errorBackendDesc: "The link may be invalid, deleted, or require login. Verify it is still accessible and try again.",
+        errorParseTitle: "Input not recognized",
+        errorParseDesc: "Please paste a valid XHS share text or link (xhslink.com / xiaohongshu.com).",
         stats: {
             likes: "Likes",
             collects: "Favs",

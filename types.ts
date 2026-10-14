@@ -38,3 +38,22 @@ export enum Language {
 }
 
 export type ParseStatus = 'idle' | 'loading' | 'success' | 'error';
+
+/**
+ * FR-03 错误三分类。
+ * - network : fetch reject / HTTP 非 2xx / 30s 超时
+ * - backend : HTTP 200 但 data 为 null 或空对象(后端已收到但未能解析)
+ * - parse   : 输入非法或响应结构不符(主要由 FR-04 输入校验触发)
+ */
+export type ErrorCategory = 'network' | 'backend' | 'parse';
+
+/**
+ * App 层使用的错误对象,与 service 层抛出的 Error 类解耦。
+ * - title   : 分类标题(已本地化)
+ * - message : 自助建议(network/parse)或后端原文(backend)
+ */
+export interface AppError {
+  category: ErrorCategory;
+  title: string;
+  message: string;
+}
