@@ -15,6 +15,8 @@ interface HistoryPanelProps {
     items: HistoryItem[];
     onPick: (text: string) => void;
     onClear: () => void;
+    /** 单条删除;不传则不渲染每行的删除按钮 */
+    onRemove?: (id: string) => void;
     language: Language;
 }
 
@@ -32,6 +34,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
     items,
     onPick,
     onClear,
+    onRemove,
     language,
 }) => {
     const [expanded, setExpanded] = useState(false);
@@ -116,6 +119,18 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
                             <div className="shrink-0 text-xs text-gray-400 mt-0.5 tabular-nums">
                                 {formatRelative(item.createdAt)}
                             </div>
+                            {onRemove && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onRemove(item.id);
+                                    }}
+                                    aria-label="Remove from history"
+                                    className="shrink-0 mt-0.5 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            )}
                         </div>
                     ))}
                 </div>

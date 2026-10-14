@@ -39,6 +39,7 @@ function App() {
         items: historyItems,
         push: pushHistory,
         clear: clearHistory,
+        remove: removeHistory,
     } = useHistory();
     const handleHistoryPick = (text: string) => {
         setInputText(text);
@@ -280,6 +281,7 @@ function App() {
                         items={historyItems}
                         onPick={handleHistoryPick}
                         onClear={clearHistory}
+                        onRemove={removeHistory}
                         language={language}
                     />
 
