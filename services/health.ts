@@ -5,8 +5,14 @@ export type HealthStatus = 'unknown' | 'up' | 'down';
 const PROBE_TIMEOUT_MS = 5_000;
 
 /**
- * 后端健康探测(FR-07):轻量 OPTIONS 预检,5 秒超时。
- * 返回布尔值:成功(2xx)= true,网络/CORS/超时 = false。
+ * 后端健康探测(FR-07):轻量 POST 探活,5 秒超时。
+ *
+ * 与 `scripts/verify.sh` 保持一致:同源经 nginx 反代架构下,浏览器不会触发
+ * CORS preflight,OPTIONS 由 FastAPI 默认 405,故用 POST + 哨兵 URL 更能反映
+ * 真实链路(nginx → 反代 → 5556)是否就绪。后端对哨兵 URL 仍会返回 200,
+ * 表明路由可达;具体解析是否成功由业务请求决定。
+ *
+ * 返回布尔值:成功(2xx)= true,网络/超时 = false。
  */
 export const probeBackend = async (
     timeoutMs: number = PROBE_TIMEOUT_MS,
@@ -17,7 +23,12 @@ export const probeBackend = async (
 
     try {
         const response = await fetch(endpoint, {
-            method: 'OPTIONS',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                url: 'https://xhslink.com/__probe__',
+                download: false,
+            }),
             signal: controller.signal,
         });
         return response.ok;
