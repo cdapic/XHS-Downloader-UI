@@ -109,10 +109,6 @@ Browse to `http://<nginx-host>:1234/`. Done.
 
 To change the backend host: **edit your nginx config** (`proxy_pass` directive), not this app.
 
-### Demo Mode
-
-For previewing the UI without a real backend, click the **Settings** icon (top-right) and enter `demo` as the API URL. The UI will load mock data. The setting only lasts for the current session — a page refresh resets to your nginx-backed endpoint.
-
 ## 🧩 Technical Notes
 
 ### Solving Video Anti-Hotlinking (403 Forbidden)

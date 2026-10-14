@@ -4,31 +4,31 @@
 
 ### [待启动] UI/UX 增量（2026-10-12 登记）
 - **候选改动**（未定优先级，用户启动时再排）：
-  - 历史记录：localStorage 存最近 N 条短链，列表展示 + 一键复用
-  - 批量粘贴：textarea 支持多行 URL，一次提交多条（复用 `parseXHSLink`）
-  - 下载进度条：jszip 打包 / 单文件下载时显示进度
-  - 缩略图网格预览：拿到数据后先渲染图片网格，用户点下载才触发打包
+  - 历史记录：localStorage 存最近 N 条短链，列表展示 + 一键复用  ✅ 已落地 (8749654)，从待办移除
+  - 批量粘贴：textarea 支持多行 URL，一次提交多条（复用 `parseXHSLink`）  ← v1.2 主线
+  - 下载进度条：jszip 打包 / 单文件下载时显示进度  ✅ 已落地 (a180c36)
+  - 缩略图网格预览：拿到数据后先渲染图片网格，用户点下载才触发打包  ✅ 已落地 (a180c36)
 - **触发时机**：用户明确开始推进时
 - **不要顺手做的**：baseUrl / CORS / 同源逻辑（已闭环，2026-09-23）
 
 ### [待启动] 健壮性（2026-10-12 登记）
 - **候选改动**（未定优先级）：
-  - 输入校验：只接受 `xhslink.com/cn` + `xiaohongshu.com` 域名，超长截断 / 非法字符提示
-  - 超时 / abort：fetch 加 `AbortController` + "取消" 按钮（卡死时可点）
-  - 网络断线 toast：失败卡片区分 网络错 / 后端错 / 解析错（不要一律"解析失败"）
+  - 输入校验：只接受 `xhslink.com/cn` + `xiaohongshu.com` 域名，超长截断 / 非法字符提示  ← v1.1 FR-04 在做
+  - 超时 / abort：fetch 加 `AbortController` + "取消" 按钮（卡死时可点）  ✅ 已落地 (12c5f65, FR-02)
+  - 网络断线 toast：失败卡片区分 网络错 / 后端错 / 解析错（不要一律"解析失败"）  ✅ 已落地 (7ecc937, FR-03)
 - **触发时机**：用户明确开始推进时
 
 ### [待启动] 代码质量（2026-10-12 登记）
 - **候选改动**（未定优先级）：
-  - `vitest` 单测：`xhsService`（解析、错误透传、success/error 分支）+ 关键组件（输入区 / 结果区）
-  - 拆 `App.tsx`（已 13KB 偏大）：按功能切 输入区 / 结果区 / 设置 / 错误卡片
+  - `vitest` 单测：`xhsService`（解析、错误透传、success/error 分支）+ 关键组件（输入区 / 结果区）  ← v1.1 NFR 在做
+  - 拆 `App.tsx`（已 13KB 偏大）：按功能切 输入区 / 结果区 / 设置 / 错误卡片  ← v1.1 FR-06 在做
 - **触发时机**：用户明确开始推进时
 - **约束**：不引入 Redux / RTK Query（沿用 activeContext 第 3 条决策）
 
 ### [待启动] 部署工具（2026-10-12 登记）
 - **候选改动**（未定优先级）：
-  - `verify` 脚本：检查 nginx 站点配置 syntax + `xhs-downloader-api` 容器 Up + 探测 `/xhs/detail` OPTIONS 预检 200
-  - `sync.sh`（已存在，2026-09-30，gitignored）：当前只 `npm run build` + `sudo rsync`，看是否需扩展加 nginx reload / 后端 `git pull` 提示
+  - `verify` 脚本：检查 nginx 站点配置 syntax + `xhs-downloader-api` 容器 Up + 探测 `/xhs/detail` OPTIONS 预检 200  ← v1.1 NFR 在做
+  - `sync.sh`（已 gitignored）：`npm run build` + `sudo rsync -a --delete`，支持 `--dry-run` / `--no-build`；扩展（nginx reload / 后端 `git pull` 提示）延后到 v1.2
 - **触发时机**：用户明确开始推进时
 
 ---

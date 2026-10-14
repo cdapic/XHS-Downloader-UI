@@ -109,10 +109,6 @@ rsync -avz --delete dist/ <用户>@<nginx 主机>:/var/www/xhs-ui/
 
 要改后端地址：**改 nginx 配置**（`proxy_pass` 指令），**不是改前端**。
 
-### 演示模式 (Demo Mode)
-
-想在没有真实后端的情况下预览 UI，点右上角 **设置 (Settings)** 图标，在 API 地址栏输入 `demo`，UI 会加载模拟数据。设置**仅在当前会话有效** —— 刷新页面会自动恢复为 nginx 反代的真实端点。
-
 ## 🧩 技术细节
 
 ### 关于视频防盗链（403 Forbidden）的解决方案
