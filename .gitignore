@@ -30,3 +30,6 @@ App copy.tsx
 
 # 部署脚本
 sync.sh
+
+# 临时工作区（agent 沙箱）
+.workbuddy/
