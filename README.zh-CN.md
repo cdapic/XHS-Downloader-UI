@@ -111,7 +111,9 @@ TARGET_HOST=my.host ./scripts/verify.sh   # 自定义目标
 脚本依次跑三项检查（任一失败立即退出并定位）:
 1. `sudo nginx -t` — 站点配置语法
 2. `docker ps` — `xhs-downloader-api` 容器是否 Up
-3. `curl OPTIONS http://<host>/xhs/detail` — CORS 预检是否 2xx
+3. `curl POST http://<host>/xhs/detail` — 经 nginx 反代能否到达后端（200）
+
+> 脚本需在 **NAS 本机** 运行（不能从开发机远程跑），因为读的是该机的 nginx + docker。
 
 ### 打开 UI
 

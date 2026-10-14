@@ -111,7 +111,9 @@ TARGET_HOST=my.host ./scripts/verify.sh   # custom target
 The script runs three checks (and fails fast on the first that breaks):
 1. `sudo nginx -t` — config syntax
 2. `docker ps` — `xhs-downloader-api` container is Up
-3. `curl OPTIONS http://<host>/xhs/detail` — CORS preflight returns 2xx
+3. `curl POST http://<host>/xhs/detail` — backend reachable (200) through nginx proxy
+
+> The script must be run **on the NAS itself** (not from the dev box) because it inspects the host's nginx + docker.
 
 ### Open the UI
 

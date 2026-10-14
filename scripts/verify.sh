@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# verify.sh — 部署前自检:nginx 语法 + 后端容器 Up + /xhs/detail OPTIONS 200
+# verify.sh — 部署前自检:nginx 语法 + 后端容器 Up + /xhs/detail POST 探活
 #
 # 用法:
 #   ./scripts/verify.sh                       # 默认目标 192.168.2.46
 #   TARGET_HOST=my.host ./scripts/verify.sh   # 自定义目标
 #
-# 前置依赖:nginx + docker + curl 在 PATH;sudo 可用
+# 必须在**部署目标主机**(NAS)上运行,因为它检查的是该机的 nginx + docker。
 #
 # 退出码:
 #   0 — 三项全过
@@ -40,17 +40,20 @@ else
 fi
 echo
 
-# 3) /xhs/detail OPTIONS 预检
-echo "[3/3] curl OPTIONS ${PROBE_URL} ..."
-if curl -fsS -X OPTIONS "${PROBE_URL}" \
-    -H "Origin: http://${TARGET_HOST}" \
-    -H "Access-Control-Request-Method: POST" \
-    -o /dev/null; then
-    echo "  preflight OK"
+# 3) /xhs/detail POST 探活(同源反代架构下 OPTIONS 由 FastAPI 默认 405,
+#     CORS 不需要 — 浏览器不会触发 preflight,因此用 POST 验证链路更准)
+echo "[3/3] curl POST ${PROBE_URL} ..."
+HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' \
+    -X POST "${PROBE_URL}" \
+    -H "Content-Type: application/json" \
+    -d '{"url":"https://xhslink.com/__verify__","download":false}')
+if [ "$HTTP_CODE" = "200" ]; then
+    echo "  backend reachable (200)"
 else
-    echo "  preflight FAILED" >&2
+    echo "  backend probe FAILED (HTTP ${HTTP_CODE})" >&2
+    echo "  hint: 检查 nginx /xhs/ 反代与 5556 端口" >&2
     exit 1
 fi
 echo
 
-echo "OK: nginx + backend + preflight all green"
+echo "OK: nginx + backend + proxy all green"
