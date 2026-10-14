@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Download, PlayCircle, Image as ImageIcon, Loader2, ExternalLink, AlertCircle, Maximize2 } from 'lucide-react';
 import { XHSNoteData, Language } from '../types';
 import { downloadMedia, downloadSingleFile } from '../utils/downloader';
+import { getExtension } from '../utils/url-helpers';
 import { t } from '../utils/i18n';
 
 interface MediaGridProps {
@@ -16,14 +17,6 @@ const getThumbnailUrl = (url: string): string => {
   if (url.includes('imageView2')) return url;
   const separator = url.includes('?') ? '&' : '?';
   return `${url}${separator}imageView2/2/w/240/format/webp/q/50`;
-};
-
-// Helper to guess extension
-const getExtension = (url: string, mediaType: 'video' | 'image'): string => {
-  if (mediaType === 'video') return 'mp4';
-  const match = url.match(/\.(png|jpg|jpeg|webp|gif)/i);
-  if (match) return match[1];
-  return 'png';
 };
 
 // --- Video Component to handle Blob fetching ---
@@ -191,11 +184,14 @@ export const MediaGrid: React.FC<MediaGridProps> = ({ data, language }) => {
     setIsDownloading(true);
     setDownloadProgress(0);
     try {
+      // FR-05:按 URL 真实扩展名命名,而不是无脑 .png。
       await downloadMedia(
-        displayItems, 
-        data.作品ID, 
+        displayItems,
+        data.作品ID,
         mediaType,
-        (p) => setDownloadProgress(p)
+        (url, i) =>
+          `${data.作品ID}_${i + 1}.${getExtension(url, mediaType)}`,
+        (p) => setDownloadProgress(p),
       );
     } catch (e) {
       alert('Download failed. Please check console.');

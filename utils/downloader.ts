@@ -36,6 +36,7 @@ export const downloadMedia = async (
   urls: string[],
   prefix: string,
   type: 'image' | 'video',
+  getFilename?: (url: string, index: number) => string,
   onProgress?: (percent: number) => void,
 ) => {
   const zip = new JSZip();
@@ -47,8 +48,11 @@ export const downloadMedia = async (
     try {
       const blob = await fetchBlob(url);
 
-      const ext = type === 'video' ? 'mp4' : 'png';
-      const filename = `${prefix}_${index + 1}.${ext}`;
+      // FR-05:扩展名由调用方传入的文件名生成器决定;
+      // 旧默认行为作为 fallback,避免破坏现有调用方。
+      const filename = getFilename
+        ? getFilename(url, index)
+        : `${prefix}_${index + 1}.${type === 'video' ? 'mp4' : 'png'}`;
 
       folder.file(filename, blob);
     } catch (error) {
