@@ -2,34 +2,71 @@
 
 ## Pending（用户明确说"后续考虑"）
 
-### [待启动] UI/UX 增量（2026-10-12 登记）
-- **候选改动**（未定优先级，用户启动时再排）：
-  - 历史记录：localStorage 存最近 N 条短链，列表展示 + 一键复用  ✅ 已落地 (8749654)，从待办移除
-  - 批量粘贴：textarea 支持多行 URL，一次提交多条（复用 `parseXHSLink`）  ← v1.2 主线
-  - 下载进度条：jszip 打包 / 单文件下载时显示进度  ✅ 已落地 (a180c36)
-  - 缩略图网格预览：拿到数据后先渲染图片网格，用户点下载才触发打包  ✅ 已落地 (a180c36)
-- **触发时机**：用户明确开始推进时
-- **不要顺手做的**：baseUrl / CORS / 同源逻辑（已闭环，2026-09-23）
+### [待启动] v1.2 批量采集（2026-10-12 路线图确定，FR-09~14）
+- **前置条件**：v1.1 验收通过 ✅ (10 个 commit 已推送),且实际使用中有批量需求
+- **路线**：方向 A→B→C 递进中的「效率台阶」,先于 v2.0 素材库
+- **Must**：
+  - FR-09 多行批量输入（textarea 支持多行 + 链接抽取,允许附带分享文案）
+  - FR-10 解析队列与逐条状态（建议并发 2,单条失败不阻塞,可单条重试）
+- **Should**：
+  - FR-11 批量打包下载（单 ZIP,每篇一文件夹 `${作品ID}_${标题}`,含 `metadata.json`）
+  - FR-12 去重入队（同作品ID 不重复入队）
+  - FR-13 剪贴板粘贴按钮降级提示（基础版 2026-10-12 已落地,HTTP 场景需复核降级路径）
+- **Could**：
+  - FR-14 移动端适配（iPhone Safari + Android Chrome 真机全流程,Lighthouse ≥70）
+- **风险提示**：批量 = 合规红线,产品层必须保单用户语义 + 小并发（见方向约束）
 
-### [待启动] 健壮性（2026-10-12 登记）
-- **候选改动**（未定优先级）：
-  - 输入校验：只接受 `xhslink.com/cn` + `xiaohongshu.com` 域名，超长截断 / 非法字符提示  ← v1.1 FR-04 在做
-  - 超时 / abort：fetch 加 `AbortController` + "取消" 按钮（卡死时可点）  ✅ 已落地 (12c5f65, FR-02)
-  - 网络断线 toast：失败卡片区分 网络错 / 后端错 / 解析错（不要一律"解析失败"）  ✅ 已落地 (7ecc937, FR-03)
-- **触发时机**：用户明确开始推进时
+### [待启动] v2.0 素材库（2026-10-12 路线图确定，FR-15~24,价值分水岭）
+- **前置条件**：v1.2 批量链路稳定 + 3 个关键问题已拍板（2026-10-14 决策见下）
+- **决策（2026-10-14）**：
+  - **Q1 存什么?** → 元数据 + 缩略图（默认）。媒体本体走"可选落盘到本地目录"（需浏览器支持 OPFS / File System Access,后续评估）
+  - **Q2 是否跨设备?** → 不需要（零服务端,FR-22/FR-24 导出/导入单文件作为替代）
+  - **Q3 是否纯自用?** → 是（README 自述一致,跳过用户体系与权限设计）
+- **Must**：
+  - FR-15 存储升级 IndexedDB（替代 localStorage 50 条/5MB 上限,封装统一存储层 `utils/vault.ts`,版本号与迁移）
+  - FR-16 自动入库零操作（解析成功即写入素材库,同作品ID 二次采集按"更新"处理）
+  - FR-17 素材卡片墙（封面/标题/作者/标签/类型/采集时间,分页或虚拟滚动,500 条下流畅）
+  - FR-18 本地检索（标题/正文/作者/标签关键词,500 条下 <300ms,标签/作者/类型筛选）
+  - FR-19 软删除与回收站（可恢复,清空需二次确认）
+- **Should**：
+  - FR-20 存储配额守卫（`navigator.storage.estimate` ≥80% 提示,处置:清回收站/仅元数据/导出后清库）
+  - FR-21 增量更新提示（同链接二次采集,元数据变化时给"该素材有更新"）
+  - FR-22 导出素材清单（JSON/CSV,按当前筛选导出,导出文件可重导入）
+- **Could**：
+  - FR-23 标签/作者聚合视图
+  - FR-24 数据备份与恢复（单文件导入导出,浏览器存储驱逐后可恢复）
 
-### [待启动] 代码质量（2026-10-12 登记）
-- **候选改动**（未定优先级）：
-  - `vitest` 单测：`xhsService`（解析、错误透传、success/error 分支）+ 关键组件（输入区 / 结果区）  ← v1.1 NFR 在做
-  - 拆 `App.tsx`（已 13KB 偏大）：按功能切 输入区 / 结果区 / 设置 / 错误卡片  ← v1.1 FR-06 在做
-- **触发时机**：用户明确开始推进时
-- **约束**：不引入 Redux / RTK Query（沿用 activeContext 第 3 条决策）
+### [待启动] v2.x 创作辅助（FR-25~29,所有项待评估,不做承诺）
+- **前置条件**：库内 ≥200 篇 + 真实检索/导出行为
+- **建议首发**：FR-25 文案结构化导出（Markdown + front-matter → Obsidian,无外部依赖,风险低）
+- **⚠️ 强约束**：FR-29 AI 辅助摘要/聚类 三项前置评估（数据合规 / 模型成本 / AI 行为边界）全部通过才得开工
 
-### [待启动] 部署工具（2026-10-12 登记）
-- **候选改动**（未定优先级）：
-  - `verify` 脚本：检查 nginx 站点配置 syntax + `xhs-downloader-api` 容器 Up + 探测 `/xhs/detail` OPTIONS 预检 200  ← v1.1 NFR 在做
-  - `sync.sh`（已 gitignored）：`npm run build` + `sudo rsync -a --delete`，支持 `--dry-run` / `--no-build`；扩展（nginx reload / 后端 `git pull` 提示）延后到 v1.2
-- **触发时机**：用户明确开始推进时
+### [待启动] 杂项（不属于主线）
+- `sync.sh` 扩展：nginx reload + 后端 `git pull` 提示（路线图建议 v1.2 阶段做）
+- 后端 CORS 收敛 `ACAO:*` → 白名单（不在本仓库）
+- 后端响应分页/懒加载单图直链（不在本仓库,首屏 payload 几 MB）
+- nginx gzip 开启（不在本仓库）
+
+### 已锁定的不做清单（不要再讨论）
+- **合规硬约束**：自动化登录 / Cookie 托管 / 定时任务 / 风控绕过 / 版权标识修改 / 多平台聚合抓取 / 第三方 AI 服务
+- **架构沿用决策**：不引入 Redux/RTK Query / 不 fork 后端 / 不改 5556 端口绑定 / 不改同源反代 / 不引入服务端用户体系
+- **阶段性暂不做**：跨设备同步 / 图片本地编辑 / 发布/回传小红书
+
+---
+
+## Done（倒序，最多 20 条；旧条目归档到 `archive/`）
+
+### 2026-10-14 — v1.1 收尾全量（10 个 commit,见 git log）
+- **FR-04 输入校验**：`utils/validation.ts` + XHS_DOMAIN_RE / MAX_INPUT_LEN=2000；i18n `inputNoDomain` / `inputTooLong`；handleParse 入口校验,失败发 parse 类错误
+- **FR-05 扩展名修正**：`utils/url-helpers.ts` 共享 `getExtension`；`downloader.ts` 签名加 `getFilename` 回调；MediaGrid 删本地副本,`.webp`/`.jpg` 不再被改 `.png`
+- **FR-06 组件拆分**：VideoItem → `components/VideoItem.tsx`(135);InputCard → `InputCard.tsx`(110);ErrorCard → `ErrorCard.tsx`(35);ResultsSection → `ResultsSection.tsx`(32)。App.tsx 354→270,MediaGrid.tsx 347→209
+- **FR-07 健康探针**：`services/health.ts` `probeBackend` (5s 超时);App.tsx mount 时探测 + 顶部琥珀色非阻断提示条(带「重试」)
+- **FR-08 工程债**：删 8 个死 i18n key;删 README 演示模式章节;刷 tasks.md 过期项;`useHistory.remove` 接入为 HistoryPanel 单条删除按钮
+- **NFR 测试基建**：vitest 2.1.9 + happy-dom + testing-library;`xhsService` 6 分支 / `url-helpers` 5 case / `validation` 7 case;18/18 通过
+- **NFR 部署自检**：`scripts/verify.sh` (+x) 三步:nginx -t / 容器 Up / OPTIONS 预检 200;README 双语增补「部署前自检」小节
+- **构建**：JS 328 KB(+2.6 KB),CSS 20 KB;dist 内 CDN 引用 0
+
+### 2026-10-12 — 粘贴按钮 + 移动端适配（前端落地）
 
 ---
 
