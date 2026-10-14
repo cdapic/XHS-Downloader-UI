@@ -99,6 +99,20 @@ rsync -avz --delete dist/ <用户>@<nginx 主机>:/var/www/xhs-ui/
 
 （仓库自带 `sync.sh`，可通过 `TARGET_HOST` / `TARGET_DIR` 环境变量调整目标。）
 
+### 部署前自检
+
+部署前一次性检查三个能动部件:
+
+```bash
+./scripts/verify.sh                       # 默认目标 192.168.2.46
+TARGET_HOST=my.host ./scripts/verify.sh   # 自定义目标
+```
+
+脚本依次跑三项检查（任一失败立即退出并定位）:
+1. `sudo nginx -t` — 站点配置语法
+2. `docker ps` — `xhs-downloader-api` 容器是否 Up
+3. `curl OPTIONS http://<host>/xhs/detail` — CORS 预检是否 2xx
+
 ### 打开 UI
 
 浏览器访问 `http://<nginx 主机>:1234/`，完事。
