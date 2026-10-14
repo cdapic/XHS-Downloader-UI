@@ -41,7 +41,7 @@ describe('probeBackend', () => {
         await expect(probeBackend(1000)).resolves.toBe(false);
     });
 
-    it('3) 用 POST 探测 + 携带哨兵 URL body(避免被误判为 OPTIONS)', async () => {
+    it('3) 用 POST 探测 + 携带空 url body(瞬时响应,不触发后端网络解析)', async () => {
         let captured: RequestInit | undefined;
         vi.stubGlobal(
             'fetch',
@@ -55,13 +55,10 @@ describe('probeBackend', () => {
         expect(captured?.headers).toMatchObject({
             'Content-Type': 'application/json',
         });
-        // body 应为合法 JSON,且 url 是哨兵
+        // body 应为合法 JSON,url 为空串(实测 ~8ms 返回 200)
         const body =
             captured?.body && JSON.parse(captured.body as string);
-        expect(body).toMatchObject({
-            url: expect.stringContaining('__probe__'),
-            download: false,
-        });
+        expect(body).toEqual({ url: '', download: false });
     });
 
     it('4) 网络异常(reject) → 返回 false', async () => {
