@@ -22,6 +22,8 @@ const translations = {
         textCopied: "文案已复制",
         pasteBtn: "粘贴",
         pasteFailed: "无法读取剪贴板，请手动粘贴",
+        cancel: "取消",
+        timeoutError: "解析超时，后端可能无响应。请稍后重试或检查后端服务。",
         stats: {
             likes: "点赞",
             collects: "收藏",
@@ -50,6 +52,8 @@ const translations = {
         textCopied: "Copied!",
         pasteBtn: "Paste",
         pasteFailed: "Cannot read clipboard, please paste manually",
+        cancel: "Cancel",
+        timeoutError: "Request timeout: backend may be unresponsive. Retry or check the backend service.",
         stats: {
             likes: "Likes",
             collects: "Favs",

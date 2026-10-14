@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Languages, Link2, Search, AlertCircle, ClipboardPaste } from "lucide-react";
 import { Language, ParseStatus, XHSApiResponse } from "./types";
-import { parseXHSLink } from "./services/xhsService";
+import { parseXHSLink, ParseAbortError } from "./services/xhsService";
 import { t } from "./utils/i18n";
 import { ResultCard } from "./components/ResultCard";
 import { MediaGrid } from "./components/MediaGrid";
@@ -22,6 +22,16 @@ function App() {
         const timer = setTimeout(() => setPasteError(false), 3000);
         return () => clearTimeout(timer);
     }, [pasteError]);
+
+    // 当前进行中的解析请求控制器（FR-02 用于取消）
+    const parseAbortRef = useRef<AbortController | null>(null);
+
+    // 卸载时若仍在解析,主动中止以避免对已卸载组件 setState
+    useEffect(() => {
+        return () => {
+            parseAbortRef.current?.abort();
+        };
+    }, []);
 
     // History (localStorage)
     const {
@@ -45,11 +55,16 @@ function App() {
         const submitted = inputText.trim();
         if (!submitted) return;
 
+        // 若已有进行中的请求,先中止(避免串行触发两次网络)
+        parseAbortRef.current?.abort();
+        const controller = new AbortController();
+        parseAbortRef.current = controller;
+
         setStatus("loading");
         setResult(null);
 
         try {
-            const data = await parseXHSLink(submitted);
+            const data = await parseXHSLink(submitted, { signal: controller.signal });
             // 后端在解析失败时返回 data: null 或 data: {} (200 状态),
             // 这两种都视为前端"失败",但要保留 message 字段以便用户看到真实原因。
             if (data) {
@@ -71,11 +86,35 @@ function App() {
                 pushHistory({ text: submitted, status: "error" });
             }
         } catch (error) {
+            // 主动取消 → 静默回到 idle,不显示错误卡片,不写入历史
+            if (error instanceof ParseAbortError && error.reason === "cancelled") {
+                setStatus("idle");
+                return;
+            }
+            // 超时 → 归类为错误(后续 FR-03 会再细化为"后端无响应")
+            if (error instanceof ParseAbortError && error.reason === "timeout") {
+                console.warn("Parse request timed out");
+                setResult({
+                    message: t(language, "timeoutError"),
+                } as XHSApiResponse);
+                setStatus("error");
+                return;
+            }
             // 网络层错误 (CORS / nginx 5xx / 后端挂掉) 才走到这里
             console.error("Parse request failed:", error);
             setStatus("error");
             pushHistory({ text: submitted, status: "error" });
+        } finally {
+            // 清理 ref:仅当仍是当前控制器时清空(避免新请求被误清)
+            if (parseAbortRef.current === controller) {
+                parseAbortRef.current = null;
+            }
         }
+    };
+
+    // Cancel current parse
+    const handleCancel = () => {
+        parseAbortRef.current?.abort();
     };
 
     // Key press (Enter)
@@ -171,20 +210,32 @@ function App() {
                                 {t(language, "pasteBtn")}
                             </button>
                             <button
-                                onClick={handleParse}
-                                disabled={
-                                    status === "loading" || !inputText.trim()
+                                onClick={
+                                    status === "loading"
+                                        ? handleCancel
+                                        : handleParse
                                 }
-                                className="flex items-center gap-2 bg-xhs-red hover:bg-red-600 text-white px-6 py-2.5 rounded-xl font-medium transition-all shadow-lg shadow-red-200 disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed active:scale-95"
+                                disabled={
+                                    status !== "loading" &&
+                                    !inputText.trim()
+                                }
+                                className={
+                                    status === "loading"
+                                        ? "flex items-center gap-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-2.5 rounded-xl font-medium transition-all min-h-[44px] active:scale-95"
+                                        : "flex items-center gap-2 bg-xhs-red hover:bg-red-600 text-white px-6 py-2.5 rounded-xl font-medium transition-all shadow-lg shadow-red-200 disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed active:scale-95"
+                                }
                             >
                                 {status === "loading" ? (
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                                        {t(language, "cancel")}
+                                    </>
                                 ) : (
-                                    <Search size={18} />
+                                    <>
+                                        <Search size={18} />
+                                        {t(language, "parseBtn")}
+                                    </>
                                 )}
-                                {status === "loading"
-                                    ? t(language, "parsing")
-                                    : t(language, "parseBtn")}
                             </button>
                         </div>
                     </div>
