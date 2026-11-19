@@ -99,12 +99,76 @@ rsync -avz --delete dist/ <用户>@<nginx 主机>:/var/www/xhs-ui/
 
 （仓库自带 `sync.sh`，可通过 `TARGET_HOST` / `TARGET_DIR` 环境变量调整目标。）
 
+### 🚀 一键部署
+
+`scripts/deploy.sh` 把整套部署串成一条命令 —— 构建、装令牌、改 nginx 配置、同步文件、
+重载、验证：
+
+```bash
+./scripts/deploy.sh                 # 默认目标 root@192.168.2.35，UI 端口 :1234
+./scripts/deploy.sh --no-build      # 跳过构建
+TARGET_HOST=root@my.host ./scripts/deploy.sh
+```
+
+依次做这些事：
+
+1. 从本机后端容器取鉴权令牌
+2. 通过 **stdin 管道**写到 `<目标机>:/etc/nginx/snippets/xhs-auth.conf`（权限 600）
+   —— 令牌不进 argv、不进本机日志
+3. 在站点配置的 `location /xhs/` 块里插入 `include /etc/nginx/snippets/xhs-auth.conf;`
+   （幂等；原配置会备份成 `xhs-ui.bak.<时间戳>`）
+4. `rsync --delete dist/` → `<目标机>:/var/www/xhs-ui/`
+5. `nginx -t` 后**优雅重载**（`systemctl reload nginx` / `nginx -s reload`，
+   **不重启**、不断现有连接）
+6. 探活 `POST <目标机>/xhs/detail` —— 经注入的令牌必须返回 200
+
+### 🔐 鉴权令牌（后端 2.9+ 必须）
+
+后端从 **2.9 起**强制校验 `Authorization: Bearer <token>`，不带或令牌无效一律返回 **403**。
+令牌由后端用本地 secret（HMAC-SHA256）签发，secret 存在后端 Volume 里，容器重建不失效。
+
+有两种配法，**选一种即可**，也可以并存（nginx 注入优先）：
+
+**方式 A：令牌文件**
+
+`sync.sh` 在同步前会把令牌写成 `dist/xhs-token.txt`，前端运行时从同源路径读取并带上请求头。
+代价：能打开页面的局域网用户也能看到这个文件。
+
+```bash
+WRITE_TOKEN=1 ./sync.sh           # 显式开启（默认 0）
+XHS_TOKEN=<token> ./sync.sh       # 指定令牌（默认从后端容器现取）
+```
+
+**方式 B：nginx 注入（令牌不落浏览器，推荐，也是当前部署方式）**
+
+```nginx
+location /xhs/ {
+    include /etc/nginx/snippets/xhs-auth.conf;   # proxy_set_header Authorization "Bearer …"
+    proxy_pass http://<后端主机>:5556/xhs/;
+    ...
+}
+```
+
+此时前端不需要令牌文件（默认行为）。nginx 的 `proxy_set_header`
+会覆盖客户端自带的头，两种方式并存不会冲突 —— `deploy.sh` 实现的就是这套
+（`xhs-auth.conf`，权限 600，由站点配置 include）。
+
+拿 token 的办法：
+
+```bash
+./scripts/fetch-token.sh                              # 从本机后端容器取
+docker exec xhs-downloader-api python main.py TOKEN    # 同上（容器内直接执行）
+```
+
+> 令牌文件缺失时，nginx 的 SPA fallback 会把 `/xhs-token.txt` 回成 `index.html`，
+> 前端会识别出格式不对并当作"没有令牌"，不会把 HTML 当令牌发出去。
+
 ### 部署前自检
 
 部署前一次性检查三个能动部件:
 
 ```bash
-./scripts/verify.sh                       # 默认目标 192.168.2.46
+./scripts/verify.sh                       # 默认目标 192.168.2.35
 TARGET_HOST=my.host ./scripts/verify.sh   # 自定义目标
 ```
 
@@ -113,7 +177,11 @@ TARGET_HOST=my.host ./scripts/verify.sh   # 自定义目标
 2. `docker ps` — `xhs-downloader-api` 容器是否 Up
 3. `curl POST http://<host>/xhs/detail` — 经 nginx 反代能否到达后端（200）
 
-> 脚本需在 **NAS 本机** 运行（不能从开发机远程跑），因为读的是该机的 nginx + docker。
+第 3 步会自动带上鉴权令牌（`XHS_TOKEN` 环境变量，或从本机后端容器现取）；
+取不到令牌时 403 视为"链路通、只差令牌"，不算失败。
+
+> 脚本要同时看到目标机的 nginx 和后端容器才跑得全 —— 分家架构下（nginx 在前端机、容器在开发机）
+> 从开发机跑第 3 步即可（`TARGET_HOST` + `TARGET_PORT` 指向前端机）。
 
 ### 打开 UI
 

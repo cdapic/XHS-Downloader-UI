@@ -25,10 +25,13 @@ const translations = {
         errorBackendDesc: "链接可能无效、已删除,或需要登录。请确认链接仍可访问后再试。",
         errorParseTitle: "输入无法识别",
         errorParseDesc: "请粘贴有效的小红书分享文案或链接(xhslink.com / xiaohongshu.com)。",
+        errorAuthTitle: "后端拒绝了请求(缺少鉴权令牌)",
+        errorAuthDesc: "后端 2.9 起强制校验 Authorization 令牌。请确认部署目录存在 xhs-token.txt,或在 nginx 的 /xhs/ 反代中注入 Authorization 头。",
         inputNoDomain: "未识别到小红书链接。请粘贴 xhslink.com / xiaohongshu.com 的分享文案或链接。",
         inputTooLong: "输入过长(超过 2000 字符),请精简后重试。",
         // FR-07 健康探针
         healthBannerText: "后端服务未就绪,部分功能可能不可用。",
+        healthAuthText: "后端可达,但拒绝了请求:缺少或无效的鉴权令牌。补上 xhs-token.txt 或在 nginx 注入 Authorization 头后重试。",
         healthRetry: "重试",
         stats: {
             likes: "点赞",
@@ -60,10 +63,13 @@ const translations = {
         errorBackendDesc: "The link may be invalid, deleted, or require login. Verify it is still accessible and try again.",
         errorParseTitle: "Input not recognized",
         errorParseDesc: "Please paste a valid XHS share text or link (xhslink.com / xiaohongshu.com).",
+        errorAuthTitle: "Backend rejected the request (auth token missing)",
+        errorAuthDesc: "Since backend 2.9 the Authorization token is mandatory. Make sure xhs-token.txt exists in the deployed directory, or inject the Authorization header in the nginx /xhs/ location.",
         inputNoDomain: "No XHS link detected. Please paste share text or link from xhslink.com / xiaohongshu.com.",
         inputTooLong: "Input too long (over 2000 chars). Please shorten and retry.",
         // FR-07 health banner
         healthBannerText: "Backend service is not ready. Some features may be unavailable.",
+        healthAuthText: "Backend is reachable but rejected the request: missing or invalid auth token. Deploy xhs-token.txt or inject the Authorization header in nginx, then retry.",
         healthRetry: "Retry",
         stats: {
             likes: "Likes",

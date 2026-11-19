@@ -4,6 +4,8 @@ import {
     ParseAbortError,
     ParseNetworkError,
 } from '../xhsService';
+import { invalidateAuthToken } from '../auth';
+import { createFetchMock } from './fetchMock';
 
 const okBody = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), {
@@ -11,27 +13,13 @@ const okBody = (body: unknown, status = 200) =>
         headers: { 'Content-Type': 'application/json' },
     });
 
-/** Mock fetch that respects AbortSignal — happy-dom 的 fetch 不会自动按 signal 中止。 */
-const signalAwareFetch = (
-    impl?: (init?: RequestInit) => Promise<Response>,
-): typeof fetch => {
-    return ((_url: string, init?: RequestInit) => {
-        const signal = init?.signal;
-        return new Promise<Response>((resolve, reject) => {
-            if (signal?.aborted) {
-                reject(new DOMException('Aborted', 'AbortError'));
-                return;
-            }
-            const onAbort = () => reject(new DOMException('Aborted', 'AbortError'));
-            signal?.addEventListener('abort', onAbort, { once: true });
-            impl?.(init).then(resolve, reject);
-        });
-    }) as typeof fetch;
-};
+/** 业务请求永远不 resolve(用于超时/取消用例)。 */
+const never = () => new Promise<Response>(() => {});
 
 describe('parseXHSLink', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
+        invalidateAuthToken();
     });
 
     it('1) HTTP 200 + 完整 body → 返回 data', async () => {
@@ -66,8 +54,9 @@ describe('parseXHSLink', () => {
                 动图地址: [null],
             },
         };
-        vi.spyOn(global, 'fetch').mockImplementationOnce(() =>
-            Promise.resolve(okBody(body)),
+        vi.stubGlobal(
+            'fetch',
+            createFetchMock(async () => okBody(body)),
         );
         const data = await parseXHSLink('https://xhslink.com/x');
         expect(data).toEqual(body);
@@ -75,8 +64,9 @@ describe('parseXHSLink', () => {
 
     it('2) HTTP 200 + data:null → 返回原 body(null data 由 App 归类为 backend)', async () => {
         const body = { message: 'failed', params: {} as any, data: null };
-        vi.spyOn(global, 'fetch').mockImplementationOnce(() =>
-            Promise.resolve(okBody(body)),
+        vi.stubGlobal(
+            'fetch',
+            createFetchMock(async () => okBody(body)),
         );
         const data = await parseXHSLink('https://xhslink.com/x');
         expect(data).toEqual(body);
@@ -84,8 +74,9 @@ describe('parseXHSLink', () => {
     });
 
     it('3) HTTP 500 → throws ParseNetworkError(status=500)', async () => {
-        vi.spyOn(global, 'fetch').mockImplementationOnce(() =>
-            Promise.resolve(okBody({}, 500)),
+        vi.stubGlobal(
+            'fetch',
+            createFetchMock(async () => okBody({}, 500)),
         );
         let caught: unknown;
         try {
@@ -98,8 +89,11 @@ describe('parseXHSLink', () => {
     });
 
     it('4) fetch reject → throws ParseNetworkError', async () => {
-        vi.spyOn(global, 'fetch').mockImplementationOnce(() =>
-            Promise.reject(new TypeError('Failed to fetch')),
+        vi.stubGlobal(
+            'fetch',
+            createFetchMock(async () => {
+                throw new TypeError('Failed to fetch');
+            }),
         );
         let caught: unknown;
         try {
@@ -111,10 +105,7 @@ describe('parseXHSLink', () => {
     });
 
     it('5) 30s 超时(测试用 50ms)→ throws ParseAbortError(reason="timeout")', async () => {
-        // 永不 resolve;signal-aware mock 会在内部 timer abort 时拒绝
-        vi.spyOn(global, 'fetch').mockImplementationOnce(
-            signalAwareFetch(() => new Promise(() => {})) as never,
-        );
+        vi.stubGlobal('fetch', createFetchMock(never));
         let caught: unknown;
         try {
             await parseXHSLink('x', { timeoutMs: 50 });
@@ -126,9 +117,7 @@ describe('parseXHSLink', () => {
     });
 
     it('6) 外部 signal abort → throws ParseAbortError(reason="cancelled")', async () => {
-        vi.spyOn(global, 'fetch').mockImplementationOnce(
-            signalAwareFetch(() => new Promise(() => {})) as never,
-        );
+        vi.stubGlobal('fetch', createFetchMock(never));
         const ac = new AbortController();
         let caught: unknown;
         try {
@@ -140,5 +129,54 @@ describe('parseXHSLink', () => {
         }
         expect(caught).toBeInstanceOf(ParseAbortError);
         expect((caught as ParseAbortError).reason).toBe('cancelled');
+    });
+
+    it('7) 后端 2.9+ 强制鉴权:有令牌文件 → 请求带 Authorization 头', async () => {
+        let captured: RequestInit | undefined;
+        vi.stubGlobal(
+            'fetch',
+            createFetchMock(
+                async (_url, init) => {
+                    captured = init;
+                    return okBody({ message: 'ok', params: {}, data: null });
+                },
+                { token: 'aaa.bbb' },
+            ),
+        );
+        await parseXHSLink('x');
+        expect(captured?.headers).toMatchObject({
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer aaa.bbb',
+        });
+    });
+
+    it('8) 后端 2.9+ 强制鉴权:无令牌文件 → 不带 Authorization(留给 nginx 注入)', async () => {
+        let captured: RequestInit | undefined;
+        vi.stubGlobal(
+            'fetch',
+            createFetchMock(async (_url, init) => {
+                captured = init;
+                return okBody({ message: 'ok', params: {}, data: null });
+            }),
+        );
+        await parseXHSLink('x');
+        expect(captured?.headers).toEqual({
+            'Content-Type': 'application/json',
+        });
+    });
+
+    it('9) HTTP 403 → throws ParseNetworkError(status=403)', async () => {
+        vi.stubGlobal(
+            'fetch',
+            createFetchMock(async () => okBody({}, 403)),
+        );
+        let caught: unknown;
+        try {
+            await parseXHSLink('x');
+        } catch (e) {
+            caught = e;
+        }
+        expect(caught).toBeInstanceOf(ParseNetworkError);
+        expect((caught as ParseNetworkError).status).toBe(403);
     });
 });

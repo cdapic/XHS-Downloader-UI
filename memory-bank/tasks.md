@@ -43,9 +43,16 @@
 
 ### [待启动] 杂项（不属于主线）
 - `sync.sh` 扩展：nginx reload + 后端 `git pull` 提示（路线图建议 v1.2 阶段做）
-- 后端 CORS 收敛 `ACAO:*` → 白名单（不在本仓库）
+- 后端 CORS 收敛 `ACAO:*` → 白名单（不在本仓库）— **注意：后端 2.9 已移除 CORS 中间件,此项作废**
 - 后端响应分页/懒加载单图直链（不在本仓库,首屏 payload 几 MB）
 - nginx gzip 开启（不在本仓库）
+
+### [已完成] 前端部署：前端机换 IP + nginx 注入（2026-11-19）
+- **原"阻塞"解除**：不是机器坏了 —— 是**前端机换了 IP**（老 192.168.2.46 整机不通，新 **192.168.2.35** 在线）
+- **鉴权配法定了**：nginx 注入（令牌只留在 2.35 的 `/etc/nginx/snippets/xhs-auth.conf`，不进浏览器）
+- **新增 `scripts/deploy.sh`**：一键部署（构建 → 装令牌 include → 改站点配置 → rsync → nginx -t + 优雅 reload → 探活），幂等
+- **脚本/文档全部改指向 .35**：`sync.sh`、`verify.sh`、`README` 双语、`memory-bank`、`docs`
+- **注**：2.35 的 :80 是另一个站点（"海纳思系统"），XHS UI 在 **:1234**
 
 ### 已锁定的不做清单（不要再讨论）
 - **合规硬约束**：自动化登录 / Cookie 托管 / 定时任务 / 风控绕过 / 版权标识修改 / 多平台聚合抓取 / 第三方 AI 服务
@@ -55,6 +62,29 @@
 ---
 
 ## Done（倒序，最多 20 条；旧条目归档到 `archive/`）
+
+### 2026-11-19 — 后端 2.9 鉴权适配（前端侧）
+- **背景**：后端升级到 2.9.beta（`dfad51b`），`POST /xhs/detail` 强制 `Authorization: Bearer <token>`，
+  不带一律 403；前端原实现只发 `Content-Type` → **升级后前端全挂**
+- **新增**：
+  - `services/auth.ts`：运行时取令牌 + 组装请求头 + 403 后清缓存重取
+  - `constants.ts`：`getAuthTokenUrl()`（同源 `/xhs-token.txt`）
+  - `scripts/fetch-token.sh`：从后端容器取令牌（打印到 stdout）
+- **改动**：
+  - `services/xhsService.ts`：带鉴权头；403 单独归类（`ParseNetworkError.status === 403`）
+  - `services/health.ts`：探活也带鉴权头（否则恒 403 → 误报"后端未就绪"）；
+    新增 `probeBackendDetailed()` 与 `HealthStatus = 'auth'`（区分"链路断"和"缺令牌"）
+  - `App.tsx`：403 → 专门的错误卡（i18n `errorAuthTitle`/`errorAuthDesc`）；健康横幅区分 'auth'
+  - `utils/i18n.ts`：新增 `errorAuthTitle` / `errorAuthDesc` / `healthAuthText`（中英）
+  - `scripts/verify.sh`：第 3 步自动带令牌；无令牌时 403 视为"链路通、只差令牌"
+  - `sync.sh`：同步前写 `dist/xhs-token.txt`（`WRITE_TOKEN=0` 可跳过）；`XHS_TOKEN` 可指定
+  - README 双语新增「🔐 鉴权令牌」小节（两种配法 + 取令牌办法）
+- **验证**（headless Chrome + CDP 真实浏览器，三种部署方式）：
+  - A 令牌文件：5/5 通过（探活无横幅 / 前端拉到令牌文件 / 请求带 Bearer / 解析出结果 / 无错误卡）
+  - B nginx 注入（无令牌文件）：5/5 通过（前端零改动可用）
+  - C 无任何令牌：6/6 通过（明确报"缺令牌"，不再误报"后端未就绪"/泛化网络错误）
+  - 单元测试 34/34 通过（新增 auth 6 + xhsService 3 + health 2）
+- **未完成**：实际部署（2.35 离线，见 Pending「阻塞中」条目）
 
 ### 2026-10-14 — v1.1 收尾全量（10 个 commit,见 git log）
 - **FR-04 输入校验**：`utils/validation.ts` + XHS_DOMAIN_RE / MAX_INPUT_LEN=2000；i18n `inputNoDomain` / `inputTooLong`；handleParse 入口校验,失败发 parse 类错误

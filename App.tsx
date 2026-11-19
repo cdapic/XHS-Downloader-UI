@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Languages, AlertCircle, RefreshCw } from 'lucide-react';
 import { AppError, Language, ParseStatus, XHSApiResponse } from './types';
 import { parseXHSLink, ParseAbortError, ParseNetworkError } from './services/xhsService';
-import { probeBackend, HealthStatus } from './services/health';
+import { probeBackendDetailed, HealthStatus } from './services/health';
 import { validateInput } from './utils/validation';
 import { t } from './utils/i18n';
 import { InputCard } from './components/InputCard';
@@ -25,8 +25,11 @@ function App() {
     const runProbe = async () => {
         if (isProbing) return;
         setIsProbing(true);
-        const ok = await probeBackend();
-        setHealth(ok ? 'up' : 'down');
+        const result = await probeBackendDetailed();
+        // 403 = 后端活着但没令牌(与"链路不通"区分,否则会误导成后端没起来)
+        setHealth(
+            result.status === 403 ? 'auth' : result.ok ? 'up' : 'down',
+        );
         setIsProbing(false);
     };
 
@@ -145,6 +148,15 @@ function App() {
             if (error instanceof ParseNetworkError) {
                 console.error('Parse network error:', error);
                 setStatus('error');
+                // 403 = 后端强制校验 Authorization 令牌(2.9+),给专门的提示
+                if (error.status === 403) {
+                    setAppError({
+                        category: 'network',
+                        title: t(language, 'errorAuthTitle'),
+                        message: t(language, 'errorAuthDesc'),
+                    });
+                    return;
+                }
                 setAppError({
                     category: 'network',
                     title: t(language, 'errorNetworkTitle'),
@@ -213,11 +225,16 @@ function App() {
             </header>
 
             <main className="max-w-5xl mx-auto px-4 py-8 md:py-12">
-                {health === 'down' && (
+                {(health === 'down' || health === 'auth') && (
                     <div className="max-w-2xl mx-auto mb-4 p-3 bg-amber-50 text-amber-700 rounded-xl flex items-center gap-3 text-sm animate-in fade-in slide-in-from-top-2">
                         <AlertCircle size={18} className="shrink-0" />
                         <span className="flex-1">
-                            {t(language, 'healthBannerText')}
+                            {t(
+                                language,
+                                health === 'auth'
+                                    ? 'healthAuthText'
+                                    : 'healthBannerText',
+                            )}
                         </span>
                         <button
                             onClick={runProbe}

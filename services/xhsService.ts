@@ -1,5 +1,6 @@
 import { XHSApiResponse } from '../types';
 import { getDefaultApiUrl } from '../constants';
+import { buildAuthHeaders, invalidateAuthToken } from './auth';
 
 /**
  * 解析请求被中止时的统一错误形态。
@@ -69,11 +70,15 @@ export const parseXHSLink = async (
   }
 
   try {
+    // 后端 2.9+ 强制 `Authorization: Bearer <token>`。
+    // 令牌来自同源 /xhs-token.txt(部署时写入);若由 nginx 注入,这里取不到也不影响。
+    const headers = await buildAuthHeaders({
+      'Content-Type': 'application/json',
+    });
+
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         url: input, // Send the raw share text
         download: false // We only want metadata first
@@ -82,6 +87,14 @@ export const parseXHSLink = async (
     });
 
     if (!response.ok) {
+      if (response.status === 403) {
+        // 令牌缺失/失效。清缓存,下次请求重新拉(可能是后补部署的令牌文件)。
+        invalidateAuthToken();
+        throw new ParseNetworkError(
+          'Backend rejected the request: missing or invalid auth token (HTTP 403)',
+          403,
+        );
+      }
       throw new ParseNetworkError(
         `API responded with HTTP ${response.status}`,
         response.status,
