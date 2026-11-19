@@ -135,15 +135,26 @@ fi
 EOF
 
 say "探活验证"
-HTTP=$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' \
-    -X POST "${TARGET_URL}/xhs/detail" \
-    -H 'Content-Type: application/json' \
-    -d '{"url":"","download":false}')
+# ⚠️ nginx 优雅 reload 后,**旧 worker 还会短暂接管新连接**(它们用的是旧配置)。
+#    reload 完立刻探活会拿到旧配置的 403 —— 那是假失败。
+#    所以这里轮询重试,等新 worker 接管(通常 1~2 秒内)。
+HTTP=""
+for i in $(seq 1 15); do
+    HTTP=$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' \
+        -X POST "${TARGET_URL}/xhs/detail" \
+        -H 'Content-Type: application/json' \
+        -d '{"url":"","download":false}' || true)
+    if [[ "$HTTP" == "200" ]]; then
+        break
+    fi
+    [[ $i -lt 15 ]] && sleep 1
+done
 if [[ "$HTTP" == "200" ]]; then
     echo "  ${TARGET_URL}/xhs/detail 经 nginx 注入令牌后返回 200 ✅"
 else
     echo "  ${TARGET_URL}/xhs/detail 返回 HTTP ${HTTP} ❌" >&2
     echo "  hint: 检查 ${AUTH_SNIPPET} 与站点配置的 include 行" >&2
+    echo "  hint: 也可能是 nginx reload 后旧 worker 还没退干净,等几秒再手工试一次" >&2
     exit 1
 fi
 

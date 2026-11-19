@@ -120,7 +120,10 @@ What it does, in order:
 4. `rsync --delete dist/` → `<target>:/var/www/xhs-ui/`
 5. `nginx -t` then a **graceful reload** (`systemctl reload nginx` / `nginx -s reload` —
    never a restart, existing connections are kept)
-6. probe `POST <target>/xhs/detail` — must come back 200 through the injected token
+6. probe `POST <target>/xhs/detail` — must come back 200 through the injected token.
+   The probe **retries for up to 15 s**: right after a graceful reload the *old* workers
+   still accept connections for a moment with the *old* config (no `Authorization` header),
+   so a single immediate probe can report a misleading 403.
 
 ### 🔐 Auth token (required since backend 2.9)
 

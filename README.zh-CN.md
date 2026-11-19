@@ -120,7 +120,10 @@ TARGET_HOST=root@my.host ./scripts/deploy.sh
 4. `rsync --delete dist/` → `<目标机>:/var/www/xhs-ui/`
 5. `nginx -t` 后**优雅重载**（`systemctl reload nginx` / `nginx -s reload`，
    **不重启**、不断现有连接）
-6. 探活 `POST <目标机>/xhs/detail` —— 经注入的令牌必须返回 200
+6. 探活 `POST <目标机>/xhs/detail` —— 经注入的令牌必须返回 200。
+   探活会**轮询重试最多 15 秒**：优雅重载后**旧 worker 还会短暂接管新连接**，
+   此时用的是旧配置（没有 Authorization 头），reload 完立刻探一次可能拿到
+   误导性的 403。
 
 ### 🔐 鉴权令牌（后端 2.9+ 必须）
 

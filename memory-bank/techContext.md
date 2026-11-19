@@ -132,6 +132,13 @@ docker ps --filter name=xhs-downloader-api                 # 确认 Up
 - **令牌只放 2.35 一处**：`/etc/nginx/snippets/xhs-auth.conf`（600）。
   改令牌只改这一个文件（`./scripts/fetch-token.sh` 取新的 → 重跑 `deploy.sh`）；
   站点配置里那行 `include` 不要手改，删了就会退回 403
+- **⚠️ nginx 优雅 reload 后，旧 worker 会短暂接管新连接**（2026-11-19 实测踩到）：
+  reload 完**立刻**探活 `/xhs/detail` 会拿到 **403**（旧配置没有 Authorization 头），
+  1~2 秒后新 worker 接管就变成 200 —— 典型的**假失败**。
+  `scripts/deploy.sh` 的探活已改成**轮询重试(最多 15 秒)**；
+  手工验证时同理：reload 后先等两秒再探。
+  排查口诀：配置对、令牌对（直接打后端 200）、reload 也发生了，但经 nginx 仍 403
+  → 先怀疑"旧 worker 还在"，再怀疑别的
 - **后端 2.9 鉴权是破坏性变更**：升级后 `POST /xhs/detail` 不带 Bearer 令牌一律 403，
   前端必须同步适配（`services/auth.ts`），否则"后端升级完前端全挂"
 - **后端 2.9 已移除 CORS 中间件**：`Access-Control-Allow-Origin: *` 没有了，

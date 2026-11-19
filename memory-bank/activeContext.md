@@ -18,8 +18,14 @@
   - 令牌装在 2.35 的 `/etc/nginx/snippets/xhs-auth.conf`（600），
     站点配置 `location /xhs/` 里 `include` 它 → `proxy_set_header Authorization "Bearer …"`
   - 前端**不**下发 `dist/xhs-token.txt`（`sync.sh` 默认 `WRITE_TOKEN=0`）
+- ✅ **已部署到 2.35 并验证通过**（2026-11-20）
+  - `http://192.168.2.35:1234/` 正常；`POST /xhs/detail` 经 nginx 注入 → 200
+  - 真实链接端到端：`https://xhslink.cn/o/ZF48mtu9v2` → 标题/作者/18 张图全部拿到
+  - 真实浏览器（headless Chrome + CDP）6/6 通过：探活无横幅、浏览器不自带 Authorization、
+    解析出作品标题与作者、无"缺令牌"错误卡、无泛化网络错误卡
 - 🟡 **一键部署脚本 `scripts/deploy.sh`**：构建 → 装令牌 include → 改站点配置 → rsync →
   `nginx -t` + 优雅 reload → 探活验证（幂等，重复跑安全）
+  - ⚠️ 探活**必须轮询重试**：reload 后旧 worker 还会短暂接管，给 403 是假失败（见 techContext 陷阱）
 
 ## 历史闭环（2026-09-23）
 - nginx `/xhs/` 反代 + 前端同源 + dist 部署
