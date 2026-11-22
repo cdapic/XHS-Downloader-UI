@@ -47,19 +47,6 @@
 - 后端响应分页/懒加载单图直链（不在本仓库,首屏 payload 几 MB）
 - nginx gzip 开启（不在本仓库）
 
-### [已完成] 前端部署：前端机换 IP + nginx 注入（2026-11-19/20）
-- **原"阻塞"解除**：不是机器坏了 —— 是**前端机换了 IP**（老 192.168.2.46 整机不通，新 **192.168.2.35** 在线）
-- **鉴权配法定了**：nginx 注入（令牌只留在 2.35 的 `/etc/nginx/snippets/xhs-auth.conf`，不进浏览器）
-- **新增 `scripts/deploy.sh`**：一键部署（构建 → 装令牌 include → 改站点配置 → rsync → nginx -t + 优雅 reload → 探活），幂等
-- **脚本/文档全部改指向 .35**：`sync.sh`、`verify.sh`、`README` 双语、`memory-bank`、`docs`
-- **注**：2.35 的 :80 是另一个站点（"海纳思系统"），XHS UI 在 **:1234**
-- **部署结果（2026-11-20 验证通过）**：
-  - `POST http://192.168.2.35:1234/xhs/detail`（客户端不带令牌）→ **200**（nginx 注入生效）
-  - 真实链接端到端：`https://xhslink.cn/o/ZF48mtu9v2` → 标题/作者/18 张图全部拿到
-  - 真实浏览器 6/6：探活无横幅、不自带 Authorization、解析渲染成功、无错误卡
-- **踩坑（已修进 deploy.sh）**：nginx 优雅 reload 后**旧 worker 短暂接管新连接**，
-  reload 完立刻探活会拿到旧配置的 **403 —— 假失败**。探活改成轮询重试(最多 15s)
-
 ### 已锁定的不做清单（不要再讨论）
 - **合规硬约束**：自动化登录 / Cookie 托管 / 定时任务 / 风控绕过 / 版权标识修改 / 多平台聚合抓取 / 第三方 AI 服务
 - **架构沿用决策**：不引入 Redux/RTK Query / 不 fork 后端 / 不改 5556 端口绑定 / 不改同源反代 / 不引入服务端用户体系
@@ -68,6 +55,26 @@
 ---
 
 ## Done（倒序，最多 20 条；旧条目归档到 `archive/`）
+
+### 2026-11-20 — 前端部署到 2.35（换 IP + nginx 注入令牌）
+- **原"阻塞"解除**：不是机器坏了 —— 是**前端机换了 IP**（老 192.168.2.46 整机不通，新 **192.168.2.35** 在线）
+- **鉴权配法定了**：nginx 注入（令牌只留在 2.35 的 `/etc/nginx/snippets/xhs-auth.conf`(600)，不进浏览器）；
+  前端**不**下发 `dist/xhs-token.txt`（`sync.sh` 默认 `WRITE_TOKEN=0`）
+- **新增 `scripts/deploy.sh`**：一键部署（构建 → 装令牌 include → 改站点配置 → rsync →
+  `nginx -t` + 优雅 reload → 探活），幂等；`scripts/fetch-token.sh` 取令牌
+- **脚本/文档全部改指向 .35**：`sync.sh`、`verify.sh`、`README` 双语、`memory-bank`、`docs`
+- **注**：2.35 的 :80 是另一个站点（"海纳思系统"），XHS UI 在 **:1234**
+- **验证通过**：
+  - `POST http://192.168.2.35:1234/xhs/detail`（客户端不带令牌）→ **200**（nginx 注入生效）
+  - 真实链接端到端：`https://xhslink.cn/o/ZF48mtu9v2` → 标题/作者/18 张图全部拿到
+  - 真实浏览器 6/6：探活无横幅、不自带 Authorization、解析渲染成功、无错误卡
+- **踩坑（已修进 deploy.sh）**：nginx 优雅 reload 后**旧 worker 短暂接管新连接**，
+  reload 完立刻探活会拿到旧配置的 **403 —— 假失败**。探活改成轮询重试(最多 15s)
+  - 排查口诀：配置对 + 令牌对（直接打后端 200）+ reload 已发生，但经 nginx 仍 403
+    → 先怀疑"旧 worker 还在"，再怀疑别的
+- **顺带修正**：误跑 pnpm 把 node_modules 换成 pnpm 布局（react 19.3.1）→
+  `npm install` 还原 npm 树（react 19.2.7），删掉多余的 `pnpm-lock.yaml`
+- **提交**：`5b7c5d9`（鉴权适配 + 部署脚本）、`6e91b0e`（探活轮询重试）
 
 ### 2026-11-19 — 后端 2.9 鉴权适配（前端侧）
 - **背景**：后端升级到 2.9.beta（`dfad51b`），`POST /xhs/detail` 强制 `Authorization: Bearer <token>`，

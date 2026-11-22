@@ -34,7 +34,7 @@
 - **CORS 兜底**：后端 2.9 起**已无 CORS 中间件**（`source/application/app.py` 搜不到 `CORSMiddleware`），
   跨域直连 5556 不再可行 —— **必须走 nginx 同源反代**
 
-## 鉴权层（后端 2.9+，2026-11-19 落地，**当前部署 = nginx 注入**）
+## 鉴权层（后端 2.9+，2026-11-19 落地，**当前部署 = nginx 注入**，2026-11-20 已上线验证）
 
 ```
 [浏览器] ── POST /xhs/detail（不带 Authorization）
